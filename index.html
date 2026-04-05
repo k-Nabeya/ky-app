@@ -90,8 +90,7 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 #draw-canvas{
   position:absolute;top:0;left:0;
   z-index:10;
-  /* penイベントのみ受け付け、touchはscroll-areaへ透過 */
-  touch-action:auto;
+  touch-action:none; /* ペンイベントをブラウザに奪わせない */
   -webkit-touch-callout:none;
   -webkit-user-select:none;
   user-select:none;
@@ -337,10 +336,25 @@ canvas.addEventListener('pointerup',   onPenUp,   {passive:false});
 canvas.addEventListener('pointercancel', onPenUp, {passive:false});
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
+// 指タッチ開始時はcanvasを透過してscroll-areaに届ける
+canvas.addEventListener('touchstart', (e) => {
+  // Apple Pencilのtouchstartは来ないのでここは全て指タッチ
+  // canvasを一時的に透過してscroll-areaのネイティブスクロールを有効化
+  canvas.style.pointerEvents = 'none';
+}, {passive:true});
+
+// 指を離したらcanvasを元に戻す
+document.addEventListener('touchend', () => {
+  canvas.style.pointerEvents = 'auto';
+}, {passive:true});
+document.addEventListener('touchcancel', () => {
+  canvas.style.pointerEvents = 'auto';
+}, {passive:true});
+
 function onPenDown(e) {
-  if (e.pointerType !== 'pen') return; // 指は無視
+  if (e.pointerType !== 'pen') return;
   e.preventDefault();
-  canvas.setPointerCapture(e.pointerId);
+  canvas.setPointerCapture(e.pointerId); // ← ペンイベントをcanvasに固定
   drawing = true;
   const p = penPos(e);
   ctx.beginPath();
@@ -348,8 +362,9 @@ function onPenDown(e) {
 }
 
 function onPenMove(e) {
-  if (e.pointerType !== 'pen' || !drawing) return;
+  if (e.pointerType !== 'pen') return;
   e.preventDefault();
+  if (!drawing) return;
   const p = penPos(e);
   const pressure = e.pressure > 0 ? e.pressure : 1;
   const sz = mode === 'eraser'
@@ -367,6 +382,7 @@ function onPenMove(e) {
 }
 
 function onPenUp(e) {
+  if (e.pointerType !== 'pen') return;
   if (!drawing) return;
   drawing = false;
   ctx.globalCompositeOperation = 'source-over';
