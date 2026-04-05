@@ -9,10 +9,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-height:100vh;color:#fff;
+*{box-sizing:border-box;margin:0;padding:0;
   -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
 }
+/* inputだけはテキスト選択を許可 */
+input{
+  -webkit-user-select:text;
+  user-select:text;
+}
+body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-height:100vh;color:#fff;}
 
 /* ===== TOP ===== */
 #top-page{display:flex;flex-direction:column;min-height:100vh;}
@@ -341,6 +348,13 @@ let mode = 'pen', currentColor = '#111', currentSize = 1.5;
 let drawing = false, lastX = 0, lastY = 0;
 let historyStack = [], redoStack = [], savedImageData = null;
 let currentRecordId = null;
+
+// iOSのコンテキストメニュー・テキスト選択をページ全体で完全ブロック
+document.addEventListener('contextmenu',  e => e.preventDefault(), { passive: false });
+document.addEventListener('selectstart',  e => e.preventDefault(), { passive: false });
+document.addEventListener('touchstart',   e => {
+  // キャンバス上のタッチはPointerEventsで処理するのでここでは何もしない
+}, { passive: true });
 
 /* ===================================================
    初期化・リサイズ
