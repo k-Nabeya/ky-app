@@ -453,8 +453,8 @@ function onPenDown(e) {
 
 function onPenMove(e) {
   if (e.pointerType !== 'pen') return;
+  if (!drawing) return;    // hover中（drawing=false）はここで終了→preventDefault不要
   e.preventDefault();
-  if (!drawing) return;
 
   // getCoalescedEvents で間引かれた中間点をすべて取得
   const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
