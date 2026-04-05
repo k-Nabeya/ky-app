@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KY記録">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 <title>現場管理システム</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -58,23 +61,29 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 #hint-bar{display:flex;align-items:center;padding:4px 12px;background:#132a42;border-bottom:2px solid #2ecc71;font-size:11px;color:rgba(255,255,255,0.6);flex-shrink:0;}
 #hint-bar.eraser{border-bottom-color:#e74c3c;}
 
-/* スクロールエリア：ブラウザのネイティブスクロールを使う */
+/* スクロール＆ピンチズームコンテナ */
 #scroll-area{
   flex:1;
-  overflow:auto;
+  overflow:hidden;
   background:#e8e8e8;
-  padding:4px;
-  /* タッチはcanvasが受けるのでここはauto */
-  touch-action:auto;
+  position:relative;
+  /* 指2本のジェスチャーをここで受ける */
+  touch-action:none;
+}
+
+/* transform でスケール＋パン */
+#pinch-layer{
+  position:absolute;
+  top:0; left:0;
+  transform-origin:0 0;
+  will-change:transform;
 }
 
 #form-wrap{
   position:relative;
   background:#fff;
   box-shadow:0 2px 12px rgba(0,0,0,0.25);
-  margin:0;
-  /* ズームはscaleで */
-  transform-origin:top left;
+  margin:8px;
 }
 
 #ky-form{
@@ -83,14 +92,11 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
   pointer-events:none;
 }
 
-/* キャンバス：フォームに重ねる
-   - Apple Pencil(pen)はここで受ける
-   - 指タッチ(touch)はpointer-eventsでcanvasを貫通させてscroll-areaに届ける
-*/
+/* キャンバス：フォームに重ねる */
 #draw-canvas{
   position:absolute;top:0;left:0;
   z-index:10;
-  touch-action:none; /* ペンイベントをブラウザに奪わせない */
+  touch-action:none;
   -webkit-touch-callout:none;
   -webkit-user-select:none;
   user-select:none;
@@ -198,6 +204,7 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
   </div>
 
   <div id="scroll-area">
+    <div id="pinch-layer">
     <div id="form-wrap">
       <div id="ky-form">
         <div class="sub-title">リスクアセスメントKY活動</div>
@@ -252,6 +259,7 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
       </div>
       <canvas id="draw-canvas"></canvas>
     </div>
+    </div><!-- /pinch-layer -->
   </div>
 </div>
 
@@ -282,20 +290,111 @@ const canvas     = document.getElementById('draw-canvas');
 const ctx        = canvas.getContext('2d');
 const formWrap   = document.getElementById('form-wrap');
 const scrollArea = document.getElementById('scroll-area');
+const pinchLayer = document.getElementById('pinch-layer');
 const DPR        = window.devicePixelRatio || 1;
 
 let FORM_W = 0, FORM_H = 0;
 let mode = 'pen', currentColor = '#111', currentSize = 1.5;
 let drawing = false;
+let lastX = 0, lastY = 0;
 let savedImageData = null;
 let currentRecordId = null;
+
+/* ===================================================
+   ピンチ＆パン（指2本）
+=================================================== */
+let viewScale = 1;
+let viewX = 0, viewY = 0;
+
+// タッチ開始時のスナップショット
+let initTouches = null;   // [{x,y}, {x,y}]
+let initScale   = 1;
+let initX       = 0, initY = 0;
+
+function applyTransform() {
+  // スケール範囲 0.4〜4
+  viewScale = Math.min(Math.max(viewScale, 0.4), 4);
+  pinchLayer.style.transform = `translate(${viewX}px,${viewY}px) scale(${viewScale})`;
+}
+
+function midpoint(t1, t2) {
+  return { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+}
+function dist(t1, t2) {
+  return Math.hypot(t1.x - t2.x, t1.y - t2.y);
+}
+function getTouches(e) {
+  return Array.from(e.touches).map(t => ({ x: t.clientX, y: t.clientY }));
+}
+
+scrollArea.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    initTouches = getTouches(e);
+    initScale   = viewScale;
+    initX       = viewX;
+    initY       = viewY;
+  }
+}, { passive: false });
+
+scrollArea.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2 && initTouches) {
+    e.preventDefault();
+    const cur = getTouches(e);
+
+    // スケール変化量
+    const scaleDelta = dist(cur[0], cur[1]) / dist(initTouches[0], initTouches[1]);
+    const newScale   = Math.min(Math.max(initScale * scaleDelta, 0.4), 4);
+
+    // ピンチ中心（画面座標）
+    const mid0 = midpoint(initTouches[0], initTouches[1]);
+    const mid1 = midpoint(cur[0],         cur[1]);
+
+    // パン量 + ピンチ中心補正
+    viewScale = newScale;
+    viewX = mid1.x - mid0.x * scaleDelta + initX * scaleDelta
+            + mid0.x * (1 - scaleDelta);
+    viewY = mid1.y - mid0.y * scaleDelta + initY * scaleDelta
+            + mid0.y * (1 - scaleDelta);
+
+    // シンプルに: スケール変更 + パン
+    viewX = initX + (mid1.x - mid0.x) + mid0.x * (1 - scaleDelta);
+    viewY = initY + (mid1.y - mid0.y) + mid0.y * (1 - scaleDelta);
+
+    applyTransform();
+  }
+}, { passive: false });
+
+scrollArea.addEventListener('touchend', (e) => {
+  if (e.touches.length < 2) initTouches = null;
+}, { passive: true });
+
+// 1本指パン（ペンモード以外でも動かせるよう touchmove で処理）
+let panStart = null;
+scrollArea.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    panStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, vx: viewX, vy: viewY };
+  }
+}, { passive: true });
+
+scrollArea.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1 && panStart) {
+    // Apple Pencilはtouchイベントを発火しないのでここは必ず指
+    e.preventDefault();
+    viewX = panStart.vx + e.touches[0].clientX - panStart.x;
+    viewY = panStart.vy + e.touches[0].clientY - panStart.y;
+    applyTransform();
+  }
+}, { passive: false });
+
+scrollArea.addEventListener('touchend', () => { panStart = null; }, { passive: true });
 
 /* ===================================================
    初期化
 =================================================== */
 function initFormSize() {
   const areaW = scrollArea.clientWidth || window.innerWidth;
-  FORM_W = Math.max(areaW - 8, 320);
+  FORM_W = Math.max(areaW - 24, 320);
 
   formWrap.style.width = FORM_W + 'px';
   document.getElementById('ky-form').style.width = FORM_W + 'px';
@@ -303,7 +402,7 @@ function initFormSize() {
   const naturalH = document.getElementById('ky-form').offsetHeight;
   const toolH = document.getElementById('toolbar').offsetHeight
               + document.getElementById('hint-bar').offsetHeight;
-  FORM_H = Math.max(naturalH, window.innerHeight - toolH - 8);
+  FORM_H = Math.max(naturalH, window.innerHeight - toolH - 24);
   formWrap.style.height = FORM_H + 'px';
 
   // Canvas設定
@@ -321,14 +420,18 @@ function initFormSize() {
     };
     img.src = savedImageData;
   }
+
+  // 初期位置：中央に配置
+  viewX = (scrollArea.clientWidth - FORM_W) / 2;
+  viewY = 8;
+  viewScale = 1;
+  applyTransform();
 }
 
 /* ===================================================
    Canvas Pointer Events
-   ポイント：
-   - Apple Pencil (pointerType==='pen') → 描画
-   - 指 (pointerType==='touch')         → キャンバスを透過してscroll-areaへ
-   CSS の touch-action:auto + pointer-events をJSで動的切替
+   Apple Pencil (pointerType==='pen') → 描画
+   指 (pointerType==='touch')         → touchイベントでパン/ピンチ処理
 =================================================== */
 canvas.addEventListener('pointerdown', onPenDown, {passive:false});
 canvas.addEventListener('pointermove', onPenMove, {passive:false});
@@ -336,49 +439,42 @@ canvas.addEventListener('pointerup',   onPenUp,   {passive:false});
 canvas.addEventListener('pointercancel', onPenUp, {passive:false});
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-// 指タッチ開始時はcanvasを透過してscroll-areaに届ける
-canvas.addEventListener('touchstart', (e) => {
-  // Apple Pencilのtouchstartは来ないのでここは全て指タッチ
-  // canvasを一時的に透過してscroll-areaのネイティブスクロールを有効化
-  canvas.style.pointerEvents = 'none';
-}, {passive:true});
-
-// 指を離したらcanvasを元に戻す
-document.addEventListener('touchend', () => {
-  canvas.style.pointerEvents = 'auto';
-}, {passive:true});
-document.addEventListener('touchcancel', () => {
-  canvas.style.pointerEvents = 'auto';
-}, {passive:true});
-
 function onPenDown(e) {
   if (e.pointerType !== 'pen') return;
   e.preventDefault();
-  canvas.setPointerCapture(e.pointerId); // ← ペンイベントをcanvasに固定
+  canvas.setPointerCapture(e.pointerId);
   drawing = true;
   const p = penPos(e);
+  lastX = p.x; lastY = p.y;
+  // ストロークの開始
   ctx.beginPath();
-  ctx.moveTo(p.x, p.y);
+  ctx.lineCap  = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = mode === 'eraser' ? currentSize * 4 : currentSize;
+  ctx.strokeStyle = currentColor;
+  ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
+  ctx.moveTo(lastX, lastY);
 }
 
 function onPenMove(e) {
   if (e.pointerType !== 'pen') return;
   e.preventDefault();
   if (!drawing) return;
-  const p = penPos(e);
-  const pressure = e.pressure > 0 ? e.pressure : 1;
-  const sz = mode === 'eraser'
-    ? currentSize * 4
-    : currentSize * (0.5 + pressure);
-  ctx.lineWidth   = sz;
-  ctx.lineCap     = 'round';
-  ctx.lineJoin    = 'round';
-  ctx.strokeStyle = mode === 'eraser' ? 'rgba(0,0,0,1)' : currentColor;
-  ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
-  ctx.lineTo(p.x, p.y);
+
+  // getCoalescedEvents で中間点も取得し、滑らかな曲線を描く
+  const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ev of events) {
+    const p = penPos(ev);
+    ctx.lineTo(p.x, p.y);
+  }
   ctx.stroke();
+
+  // 次のセグメントへ（始点を現在地に更新）
+  const last = events[events.length - 1];
+  const lp   = penPos(last);
   ctx.beginPath();
-  ctx.moveTo(p.x, p.y);
+  ctx.moveTo(lp.x, lp.y);
+  lastX = lp.x; lastY = lp.y;
 }
 
 function onPenUp(e) {
@@ -391,18 +487,13 @@ function onPenUp(e) {
 
 function penPos(e) {
   const rect = canvas.getBoundingClientRect();
+  // getBoundingClientRect は scale 後のサイズを返すので、
+  // 実際の canvas 座標に逆変換する
   return {
     x: (e.clientX - rect.left) * (FORM_W / rect.width),
     y: (e.clientY - rect.top)  * (FORM_H / rect.height)
   };
 }
-
-/* ===================================================
-   指タッチ → scroll-area のネイティブスクロール/ピンチに委譲
-   canvasにはpointer-events:noneをCSSで設定せず、
-   pointerType==='touch'のイベントはJSで無視するだけ。
-   scroll-areaのtouch-action:autoがiOSのネイティブ動作を有効化。
-=================================================== */
 
 /* ===================================================
    ツール
@@ -619,6 +710,13 @@ async function exportPDF() {
 }
 
 buildParticipants();
+
+// Service Worker 登録（PWA化）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
