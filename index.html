@@ -36,12 +36,7 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 
 /* ===== KY ===== */
 #ky-page{display:none;flex-direction:column;height:100vh;overflow:hidden;}
-
-#toolbar{
-  display:flex;align-items:center;gap:6px;padding:6px 10px;
-  background:#1e3a5f;color:#fff;flex-wrap:wrap;
-  flex-shrink:0;z-index:100;
-}
+#toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#1e3a5f;color:#fff;flex-wrap:wrap;flex-shrink:0;z-index:100;}
 #toolbar-title{font-size:14px;font-weight:600;white-space:nowrap;}
 #back-btn{padding:5px 10px;border:1px solid rgba(255,255,255,0.4);border-radius:5px;background:rgba(255,255,255,0.1);color:#fff;font-size:12px;cursor:pointer;white-space:nowrap;}
 .tb-group{display:flex;align-items:center;gap:4px;}
@@ -58,43 +53,45 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 #new-btn{background:#2980b9;border-color:#1a6fa0;}
 #pdf-btn{background:#e67e22;border-color:#d35400;}
 #clear-btn{background:rgba(231,76,60,0.5);border-color:#e74c3c;}
+#current-record-label{font-size:10px;color:rgba(255,255,255,0.5);white-space:nowrap;}
 
-#hint-bar{
-  display:flex;align-items:center;padding:4px 12px;
-  background:#132a42;border-bottom:2px solid #2ecc71;
-  font-size:11px;color:rgba(255,255,255,0.6);flex-shrink:0;
-}
+#hint-bar{display:flex;align-items:center;padding:4px 12px;background:#132a42;border-bottom:2px solid #2ecc71;font-size:11px;color:rgba(255,255,255,0.6);flex-shrink:0;}
 #hint-bar.eraser{border-bottom-color:#e74c3c;}
 
-/* スクロール・描画エリア */
+/* スクロールエリア：ブラウザのネイティブスクロールを使う */
 #scroll-area{
   flex:1;
-  overflow:hidden;/* JSで制御 */
+  overflow:auto;
   background:#e8e8e8;
-  position:relative;
-  touch-action:none;/* 全タッチをJSで制御 */
+  padding:4px;
+  /* タッチはcanvasが受けるのでここはauto */
+  touch-action:auto;
 }
 
-/* フォームとキャンバスを包むラッパー */
 #form-wrap{
-  position:absolute;
-  top:0;left:0;
+  position:relative;
   background:#fff;
   box-shadow:0 2px 12px rgba(0,0,0,0.25);
+  margin:0;
+  /* ズームはscaleで */
   transform-origin:top left;
 }
 
 #ky-form{
   padding:14px 14px 8px;
   position:relative;
-  pointer-events:none;/* タッチはキャンバスが受ける */
+  pointer-events:none;
 }
 
-/* キャンバス：フォームの上に完全に重ねる */
+/* キャンバス：フォームに重ねる
+   - Apple Pencil(pen)はここで受ける
+   - 指タッチ(touch)はpointer-eventsでcanvasを貫通させてscroll-areaに届ける
+*/
 #draw-canvas{
   position:absolute;top:0;left:0;
   z-index:10;
-  touch-action:none;
+  /* penイベントのみ受け付け、touchはscroll-areaへ透過 */
+  touch-action:auto;
   -webkit-touch-callout:none;
   -webkit-user-select:none;
   user-select:none;
@@ -142,8 +139,6 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
 
 #toast{display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(46,204,113,0.95);color:#fff;padding:10px 24px;border-radius:24px;font-size:14px;z-index:3000;white-space:nowrap;}
 #toast.show{display:block;}
-
-#current-record-label{font-size:10px;color:rgba(255,255,255,0.5);white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -162,24 +157,9 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
       <div class="card-desc">危険予知活動表の作成・手書き入力・PDF出力</div></div>
       <div class="card-arrow">→</div>
     </div>
-    <div class="app-card coming">
-      <span class="card-badge badge-coming">準備中</span>
-      <div class="card-icon">📝</div>
-      <div><div class="card-title">作業日報</div>
-      <div class="card-desc">日々の作業内容・進捗・工数を記録</div></div>
-    </div>
-    <div class="app-card coming">
-      <span class="card-badge badge-coming">準備中</span>
-      <div class="card-icon">🦺</div>
-      <div><div class="card-title">安全パトロール記録</div>
-      <div class="card-desc">パトロール結果・指摘事項・改善確認</div></div>
-    </div>
-    <div class="app-card coming">
-      <span class="card-badge badge-coming">準備中</span>
-      <div class="card-icon">🔧</div>
-      <div><div class="card-title">設備点検記録</div>
-      <div class="card-desc">設備の定期点検・異常報告・整備履歴</div></div>
-    </div>
+    <div class="app-card coming"><span class="card-badge badge-coming">準備中</span><div class="card-icon">📝</div><div><div class="card-title">作業日報</div><div class="card-desc">日々の作業内容・進捗・工数を記録</div></div></div>
+    <div class="app-card coming"><span class="card-badge badge-coming">準備中</span><div class="card-icon">🦺</div><div><div class="card-title">安全パトロール記録</div><div class="card-desc">パトロール結果・指摘事項・改善確認</div></div></div>
+    <div class="app-card coming"><span class="card-badge badge-coming">準備中</span><div class="card-icon">🔧</div><div><div class="card-title">設備点検記録</div><div class="card-desc">設備の定期点検・異常報告・整備履歴</div></div></div>
   </div>
 </div>
 
@@ -202,20 +182,20 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
     </div>
     <div class="tb-sep"></div>
     <div class="tb-group">
-      <div class="size-btn active" id="sz-thin" onclick="setSize(1.5)"><div class="size-dot" style="width:3px;height:3px;"></div></div>
-      <div class="size-btn" id="sz-mid"  onclick="setSize(4)"><div class="size-dot" style="width:7px;height:7px;"></div></div>
-      <div class="size-btn" id="sz-thick" onclick="setSize(9)"><div class="size-dot" style="width:12px;height:12px;"></div></div>
+      <div class="size-btn active" id="sz-thin"  onclick="setSize(1.5)"><div class="size-dot" style="width:3px;height:3px;"></div></div>
+      <div class="size-btn"        id="sz-mid"   onclick="setSize(4)">  <div class="size-dot" style="width:7px;height:7px;"></div></div>
+      <div class="size-btn"        id="sz-thick" onclick="setSize(9)">  <div class="size-dot" style="width:12px;height:12px;"></div></div>
     </div>
     <div class="tb-sep"></div>
     <button class="tb-btn" id="clear-btn" onclick="confirmClear()">クリア</button>
-    <button class="tb-btn" id="new-btn" onclick="newRecord()">＋ 新規</button>
-    <button class="tb-btn" id="open-btn" onclick="showList()">📂 開く</button>
-    <button class="tb-btn" id="save-btn" onclick="saveRecord()">💾 保存</button>
-    <button class="tb-btn" id="pdf-btn" onclick="exportPDF()">📄 PDF</button>
+    <button class="tb-btn" id="new-btn"   onclick="newRecord()">＋ 新規</button>
+    <button class="tb-btn" id="open-btn"  onclick="showList()">📂 開く</button>
+    <button class="tb-btn" id="save-btn"  onclick="saveRecord()">💾 保存</button>
+    <button class="tb-btn" id="pdf-btn"   onclick="exportPDF()">📄 PDF</button>
   </div>
 
   <div id="hint-bar">
-    <span id="hint-text">✏️ Apple Pencilで手書き　　👆 2本指でスクロール・ピンチでズーム</span>
+    <span id="hint-text">✏️ Apple Pencilで手書き　　👆 指2本でスクロール・ピンチでズーム</span>
   </div>
 
   <div id="scroll-area">
@@ -223,7 +203,6 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
       <div id="ky-form">
         <div class="sub-title">リスクアセスメントKY活動</div>
         <div class="form-title" id="form-title-text">　　月　　日（　）の危険予知活動表</div>
-
         <table style="margin-bottom:6px;">
           <tr>
             <td class="lbl" style="width:13%;height:48px;font-size:14px;">会社名</td>
@@ -234,31 +213,24 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
             <td style="width:16%;height:48px;background:#fff;"></td>
           </tr>
         </table>
-
         <table style="margin-bottom:6px;">
           <thead>
             <tr>
               <th class="lbl" style="width:14%;font-size:13px;height:52px;">参加者名<br>（サイン）</th>
-              <th style="width:10.75%;background:#fff;height:52px;"></th>
-              <th style="width:10.75%;background:#fff;"></th>
-              <th style="width:10.75%;background:#fff;"></th>
-              <th style="width:10.75%;background:#fff;"></th>
-              <th style="width:10.75%;background:#fff;"></th>
-              <th style="width:10.75%;background:#fff;"></th>
-              <th style="width:10.75%;background:#fff;"></th>
-              <th style="width:10.75%;background:#fff;"></th>
+              <th style="width:10.75%;background:#fff;height:52px;"></th><th style="width:10.75%;background:#fff;"></th>
+              <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
+              <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
+              <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
             </tr>
           </thead>
           <tbody id="participant-body"></tbody>
         </table>
-
         <table style="margin-bottom:6px;">
           <tr>
             <td class="lbl" style="width:14%;height:52px;font-size:14px;">作業内容</td>
             <td style="background:#fff;height:52px;"></td>
           </tr>
         </table>
-
         <table>
           <thead>
             <tr>
@@ -284,18 +256,12 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
   </div>
 </div>
 
-<!-- 記録一覧 -->
 <div id="list-overlay">
   <div id="list-modal">
-    <div id="list-header">
-      <h2>📂 保存済み記録</h2>
-      <button id="list-close" onclick="closeList()">✕</button>
-    </div>
+    <div id="list-header"><h2>📂 保存済み記録</h2><button id="list-close" onclick="closeList()">✕</button></div>
     <div id="list-body"></div>
   </div>
 </div>
-
-<!-- クリア確認 -->
 <div id="modal-overlay">
   <div id="modal">
     <h2>手書きをクリア</h2>
@@ -306,198 +272,138 @@ td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
     </div>
   </div>
 </div>
-
 <div id="pdf-overlay"><p>📄 PDF生成中...</p></div>
 <div id="toast"></div>
 
 <script>
-document.addEventListener('contextmenu', e => e.preventDefault(), { passive: false });
-document.addEventListener('selectstart',  e => e.preventDefault(), { passive: false });
+document.addEventListener('contextmenu', e => e.preventDefault(), {passive:false});
+document.addEventListener('selectstart',  e => e.preventDefault(), {passive:false});
 
-const canvas    = document.getElementById('draw-canvas');
-const ctx       = canvas.getContext('2d');
-const formWrap  = document.getElementById('form-wrap');
-const scrollArea= document.getElementById('scroll-area');
-const DPR       = window.devicePixelRatio || 1;
+const canvas     = document.getElementById('draw-canvas');
+const ctx        = canvas.getContext('2d');
+const formWrap   = document.getElementById('form-wrap');
+const scrollArea = document.getElementById('scroll-area');
+const DPR        = window.devicePixelRatio || 1;
 
 let FORM_W = 0, FORM_H = 0;
 let mode = 'pen', currentColor = '#111', currentSize = 1.5;
 let drawing = false;
 let savedImageData = null;
 let currentRecordId = null;
-let historyStack = [], redoStack = [];
 
-/* ===== スクロール・ズーム状態 ===== */
-let scrollX = 0, scrollY = 0;   // 現在のスクロール位置
-let scale   = 1;                 // 現在のズーム倍率
-const MIN_SCALE = 1, MAX_SCALE = 4;
-
-/* ===== Pointer管理 ===== */
-const pointers = new Map(); // pointerId → pointerEvent
-
-/* ===== 初期化 ===== */
-function init() {
+/* ===================================================
+   初期化
+=================================================== */
+function initFormSize() {
   const areaW = scrollArea.clientWidth || window.innerWidth;
-  const areaH = scrollArea.clientHeight || window.innerHeight;
-  FORM_W = areaW;
+  FORM_W = Math.max(areaW - 8, 320);
 
-  // フォーム高さ：自然な高さ or 画面高さの大きい方
   formWrap.style.width = FORM_W + 'px';
   document.getElementById('ky-form').style.width = FORM_W + 'px';
-  // 一度レイアウトを確定させてから高さ取得
+
   const naturalH = document.getElementById('ky-form').offsetHeight;
-  FORM_H = Math.max(naturalH, areaH);
+  const toolH = document.getElementById('toolbar').offsetHeight
+              + document.getElementById('hint-bar').offsetHeight;
+  FORM_H = Math.max(naturalH, window.innerHeight - toolH - 8);
   formWrap.style.height = FORM_H + 'px';
 
-  // キャンバス設定（高解像度）
+  // Canvas設定
   canvas.style.width  = FORM_W + 'px';
   canvas.style.height = FORM_H + 'px';
   canvas.width  = Math.round(FORM_W * DPR);
   canvas.height = Math.round(FORM_H * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  // 初期位置
-  scrollX = 0; scrollY = 0; scale = 1;
-  applyTransform();
+  if (savedImageData) {
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, FORM_W, FORM_H);
+      ctx.drawImage(img, 0, 0, FORM_W, FORM_H);
+    };
+    img.src = savedImageData;
+  }
 }
 
-function applyTransform() {
-  // form-wrap全体をscale＋translateで移動
-  formWrap.style.transform =
-    `translate(${-scrollX}px, ${-scrollY}px) scale(${scale})`;
-}
+/* ===================================================
+   Canvas Pointer Events
+   ポイント：
+   - Apple Pencil (pointerType==='pen') → 描画
+   - 指 (pointerType==='touch')         → キャンバスを透過してscroll-areaへ
+   CSS の touch-action:auto + pointer-events をJSで動的切替
+=================================================== */
+canvas.addEventListener('pointerdown', onPenDown, {passive:false});
+canvas.addEventListener('pointermove', onPenMove, {passive:false});
+canvas.addEventListener('pointerup',   onPenUp,   {passive:false});
+canvas.addEventListener('pointercancel', onPenUp, {passive:false});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-/* ===== タッチ制御（Pointer Events） ===== */
-scrollArea.addEventListener('pointerdown',   onDown,   { passive: false });
-scrollArea.addEventListener('pointermove',   onMove,   { passive: false });
-scrollArea.addEventListener('pointerup',     onUp,     { passive: false });
-scrollArea.addEventListener('pointercancel', onUp,     { passive: false });
-scrollArea.addEventListener('contextmenu',   e => e.preventDefault());
-
-let prevPinchDist   = 0;
-let prevPinchCenterX= 0;
-let prevPinchCenterY= 0;
-let isPinching = false;
-
-function onDown(e) {
+function onPenDown(e) {
+  if (e.pointerType !== 'pen') return; // 指は無視
   e.preventDefault();
-  pointers.set(e.pointerId, e);
-  scrollArea.setPointerCapture(e.pointerId);
-
-  if (pointers.size === 1 && e.pointerType === 'pen') {
-    // Apple Pencil → 描画開始
-    drawing = true;
-    isPinching = false;
-    const p = toFormCoord(e.clientX, e.clientY);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-  } else if (pointers.size === 2) {
-    // 2本指 → ピンチ/スクロール
-    drawing = false;
-    isPinching = true;
-    updatePinchRef();
-  }
+  canvas.setPointerCapture(e.pointerId);
+  drawing = true;
+  const p = penPos(e);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
 }
 
-function onMove(e) {
+function onPenMove(e) {
+  if (e.pointerType !== 'pen' || !drawing) return;
   e.preventDefault();
-  pointers.set(e.pointerId, e);
-
-  if (drawing && e.pointerType === 'pen' && pointers.size === 1) {
-    // Apple Pencil 描画
-    const p = toFormCoord(e.clientX, e.clientY);
-    const pressure = e.pressure > 0 ? e.pressure : 1;
-    const sz = mode === 'eraser' ? currentSize * 4 : currentSize * (0.5 + pressure);
-    ctx.lineWidth = sz;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = mode === 'eraser' ? 'rgba(0,0,0,1)' : currentColor;
-    ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-
-  } else if (isPinching && pointers.size === 2) {
-    // 2本指ピンチ＋スクロール
-    const pts = [...pointers.values()];
-    const cx = (pts[0].clientX + pts[1].clientX) / 2;
-    const cy = (pts[0].clientY + pts[1].clientY) / 2;
-    const dist = Math.hypot(
-      pts[0].clientX - pts[1].clientX,
-      pts[0].clientY - pts[1].clientY
-    );
-
-    // ズーム
-    const ratio = dist / prevPinchDist;
-    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * ratio));
-
-    // スクロール（中心点の移動量）
-    const dx = prevPinchCenterX - cx;
-    const dy = prevPinchCenterY - cy;
-
-    scale = newScale;
-    scrollX = Math.max(0, scrollX + dx);
-    scrollY = Math.max(0, scrollY + dy);
-    applyTransform();
-
-    prevPinchDist    = dist;
-    prevPinchCenterX = cx;
-    prevPinchCenterY = cy;
-
-  } else if (!isPinching && pointers.size === 1 && e.pointerType === 'touch' && !drawing) {
-    // 1本指タッチ（指）→ スクロール
-    // ※ Apple Pencilは pointerType==='pen' なので混在しない
-  }
+  const p = penPos(e);
+  const pressure = e.pressure > 0 ? e.pressure : 1;
+  const sz = mode === 'eraser'
+    ? currentSize * 4
+    : currentSize * (0.5 + pressure);
+  ctx.lineWidth   = sz;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.strokeStyle = mode === 'eraser' ? 'rgba(0,0,0,1)' : currentColor;
+  ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
 }
 
-function onUp(e) {
-  e.preventDefault();
-  pointers.delete(e.pointerId);
-
-  if (drawing && e.pointerType === 'pen') {
-    drawing = false;
-    ctx.globalCompositeOperation = 'source-over';
-    saveHistory();
-  }
-  if (pointers.size < 2) {
-    isPinching = false;
-  }
+function onPenUp(e) {
+  if (!drawing) return;
+  drawing = false;
+  ctx.globalCompositeOperation = 'source-over';
+  savedImageData = canvas.toDataURL();
 }
 
-function updatePinchRef() {
-  const pts = [...pointers.values()];
-  if (pts.length < 2) return;
-  prevPinchDist = Math.hypot(
-    pts[0].clientX - pts[1].clientX,
-    pts[0].clientY - pts[1].clientY
-  );
-  prevPinchCenterX = (pts[0].clientX + pts[1].clientX) / 2;
-  prevPinchCenterY = (pts[0].clientY + pts[1].clientY) / 2;
-}
-
-/* フォーム座標変換（スクロール・ズームを考慮） */
-function toFormCoord(clientX, clientY) {
-  const areaRect = scrollArea.getBoundingClientRect();
-  const relX = clientX - areaRect.left;
-  const relY = clientY - areaRect.top;
+function penPos(e) {
+  const rect = canvas.getBoundingClientRect();
   return {
-    x: (relX + scrollX) / scale,
-    y: (relY + scrollY) / scale
+    x: (e.clientX - rect.left) * (FORM_W / rect.width),
+    y: (e.clientY - rect.top)  * (FORM_H / rect.height)
   };
 }
 
-/* ===== ツール ===== */
+/* ===================================================
+   指タッチ → scroll-area のネイティブスクロール/ピンチに委譲
+   canvasにはpointer-events:noneをCSSで設定せず、
+   pointerType==='touch'のイベントはJSで無視するだけ。
+   scroll-areaのtouch-action:autoがiOSのネイティブ動作を有効化。
+=================================================== */
+
+/* ===================================================
+   ツール
+=================================================== */
 function setMode(m) {
   mode = m;
   document.getElementById('pen-btn').classList.toggle('active', m === 'pen');
   document.getElementById('eraser-btn').classList.toggle('active', m === 'eraser');
-  const bar = document.getElementById('hint-bar');
+  const bar  = document.getElementById('hint-bar');
   const hint = document.getElementById('hint-text');
-  bar.className = m === 'eraser' ? 'eraser' : '';
-  hint.textContent = m === 'pen'
-    ? '✏️ Apple Pencilで手書き　　👆 2本指でスクロール・ピンチでズーム'
-    : '⬜ 消しゴムモード　　👆 2本指でスクロール・ピンチでズーム';
+  if (m === 'pen') {
+    bar.className = '';
+    hint.textContent = '✏️ Apple Pencilで手書き　　👆 指2本でスクロール・ピンチでズーム';
+  } else {
+    bar.className = 'eraser';
+    hint.textContent = '⬜ 消しゴムモード　　👆 指2本でスクロール・ピンチでズーム';
+  }
 }
 function setColor(c) {
   currentColor = c; setMode('pen');
@@ -511,21 +417,9 @@ function setSize(s) {
   document.getElementById('sz-thick').classList.toggle('active', s === 9);
 }
 
-/* ===== Undo/Redo（将来再実装用：現在コメントアウト）
-function saveHistory() {
-  historyStack.push(canvas.toDataURL());
-  if (historyStack.length > 20) historyStack.shift();
-  redoStack = [];
-  savedImageData = historyStack[historyStack.length - 1];
-}
-function undo() { ... }
-function redo() { ... }
-===== */
-function saveHistory() {
-  savedImageData = canvas.toDataURL();
-}
-
-/* ===== クリア ===== */
+/* ===================================================
+   クリア
+=================================================== */
 function confirmClear() { document.getElementById('modal-overlay').classList.add('show'); }
 function closeModal()   { document.getElementById('modal-overlay').classList.remove('show'); }
 function doClear() {
@@ -534,7 +428,9 @@ function doClear() {
   closeModal();
 }
 
-/* ===== ストレージ ===== */
+/* ===================================================
+   ストレージ
+=================================================== */
 const STORE_KEY = 'ky_records_v2';
 function loadAllRecords() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { return []; }
@@ -546,17 +442,12 @@ function newRecord() {
   currentRecordId = genId();
   ctx.clearRect(0, 0, FORM_W, FORM_H);
   savedImageData = canvas.toDataURL();
-  historyStack = []; redoStack = [];
   updateTitle(); updateRecordLabel();
 }
 function saveRecord() {
   const records = loadAllRecords();
   const idx = records.findIndex(r => r.id === currentRecordId);
-  const data = {
-    id: currentRecordId,
-    drawing: canvas.toDataURL(),
-    savedAt: new Date().toISOString()
-  };
+  const data = { id: currentRecordId, drawing: canvas.toDataURL(), savedAt: new Date().toISOString() };
   if (idx >= 0) records[idx] = data; else records.unshift(data);
   saveAllRecords(records);
   showToast('💾 保存しました');
@@ -575,7 +466,6 @@ function loadRecord(id) {
     };
     img.src = data.drawing;
   }
-  historyStack = []; redoStack = [];
   updateRecordLabel(); closeList();
 }
 function deleteRecord(id, e) {
@@ -596,7 +486,9 @@ function updateRecordLabel() {
   }
 }
 
-/* ===== 一覧 ===== */
+/* ===================================================
+   記録一覧
+=================================================== */
 function showList() {
   const records = loadAllRecords();
   const body = document.getElementById('list-body');
@@ -615,7 +507,7 @@ function showList() {
           <div class="day">${String(d.getDate()).padStart(2,'0')}日</div>
         </div>
         <div class="record-info">
-          <div class="record-group">${String(d.getFullYear())}年${String(d.getMonth()+1).padStart(2,'0')}月${String(d.getDate()).padStart(2,'0')}日</div>
+          <div class="record-group">${d.getFullYear()}年${String(d.getMonth()+1).padStart(2,'0')}月${String(d.getDate()).padStart(2,'0')}日</div>
           <div class="record-sub">${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} 保存</div>
         </div>
         <button class="record-del" onclick="deleteRecord('${r.id}',event)">削除</button>`;
@@ -626,7 +518,9 @@ function showList() {
 }
 function closeList() { document.getElementById('list-overlay').classList.remove('show'); }
 
-/* ===== ユーティリティ ===== */
+/* ===================================================
+   ユーティリティ
+=================================================== */
 function buildParticipants() {
   const rows = [
     {label:'体　調(AM)<br>よい○　悪い×',h:44},
@@ -655,13 +549,15 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-/* ===== ページ遷移 ===== */
+/* ===================================================
+   ページ遷移
+=================================================== */
 function openKY(recordId) {
   document.getElementById('top-page').style.display = 'none';
   document.getElementById('ky-page').style.display  = 'flex';
   updateTitle();
   setTimeout(() => {
-    init();
+    initFormSize();
     if (recordId) loadRecord(recordId);
     else newRecord();
   }, 80);
@@ -671,47 +567,33 @@ function goTop() {
   document.getElementById('top-page').style.display = 'flex';
 }
 
-/* ===== PDF出力 ===== */
+/* ===================================================
+   PDF出力
+=================================================== */
 async function exportPDF() {
   const overlay = document.getElementById('pdf-overlay');
   overlay.classList.add('show');
   try {
-    // 一時的にscaleを1に戻してhtml2canvasで撮影
-    const savedScale = scale;
-    const savedSX = scrollX, savedSY = scrollY;
-    scale = 1; scrollX = 0; scrollY = 0;
-    applyTransform();
-    await new Promise(r => setTimeout(r, 100));
-
     canvas.style.display = 'none';
     const formEl = document.getElementById('form-wrap');
-    const formCanvas = await html2canvas(formEl, {
-      scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false
-    });
+    const fc = await html2canvas(formEl, {scale:2, useCORS:true, backgroundColor:'#ffffff', logging:false});
     canvas.style.display = 'block';
 
-    // 手書き合成
     const merged = document.createElement('canvas');
-    merged.width  = formCanvas.width;
-    merged.height = formCanvas.height;
+    merged.width = fc.width; merged.height = fc.height;
     const mc = merged.getContext('2d');
-    mc.drawImage(formCanvas, 0, 0);
-    const sc = formCanvas.width / FORM_W;
+    mc.drawImage(fc, 0, 0);
+    const sc = fc.width / FORM_W;
     mc.save(); mc.scale(sc, sc);
     mc.drawImage(canvas, 0, 0, FORM_W, FORM_H);
     mc.restore();
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
     doc.addImage(merged.toDataURL('image/jpeg', 0.95), 'JPEG', 4, 4, 289, 202);
-
     const now = new Date();
     const ds = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
     doc.save(`KY_${ds}.pdf`);
-
-    // スケール・スクロール位置を戻す
-    scale = savedScale; scrollX = savedSX; scrollY = savedSY;
-    applyTransform();
   } catch(err) {
     canvas.style.display = 'block';
     alert('PDF生成エラー: ' + err.message);
