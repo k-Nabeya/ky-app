@@ -10,7 +10,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-height:100vh;color:#fff;}
+body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-height:100vh;color:#fff;
+  -webkit-touch-callout:none;
+}
 
 /* ===== TOP ===== */
 #top-page{display:flex;flex-direction:column;min-height:100vh;}
@@ -94,6 +96,10 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
   position:absolute;top:0;left:0;
   z-index:10;
   touch-action:none;
+  /* iOSのコンテキストメニュー・テキスト選択を無効化 */
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
 }
 
 table{border-collapse:collapse;width:100%;}
@@ -423,6 +429,8 @@ canvas.addEventListener('pointerdown',   onPointerDown,   { passive: false });
 canvas.addEventListener('pointermove',   onPointerMove,   { passive: false });
 canvas.addEventListener('pointerup',     onPointerUp,     { passive: false });
 canvas.addEventListener('pointercancel', onPointerCancel, { passive: false });
+// iOSの長押しメニューを完全無効化
+canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // ピンチ状態
 let pinching = false;
