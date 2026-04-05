@@ -7,15 +7,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>現場管理システム</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-height:100vh;color:#fff;}
 
+/* ===== TOP ===== */
 #top-page{display:flex;flex-direction:column;min-height:100vh;}
 #top-header{padding:32px 40px 24px;border-bottom:1px solid rgba(255,255,255,0.08);}
 #top-header h1{font-size:26px;font-weight:700;letter-spacing:0.05em;}
 #top-header p{font-size:13px;color:rgba(255,255,255,0.45);margin-top:4px;}
-
 #top-grid{
   flex:1;display:grid;
   grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
@@ -24,7 +25,7 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 .app-card{
   background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
   border-radius:16px;padding:32px 28px;cursor:pointer;transition:all 0.18s;
-  display:flex;flex-direction:column;gap:14px;min-height:176px;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;gap:14px;min-height:176px;position:relative;
 }
 .app-card:hover{background:rgba(255,255,255,0.09);border-color:rgba(255,255,255,0.2);transform:translateY(-2px);}
 .app-card.coming{cursor:default;opacity:0.42;}
@@ -40,6 +41,7 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 .card-desc{font-size:12px;color:rgba(255,255,255,0.48);line-height:1.65;}
 .card-arrow{margin-top:auto;font-size:18px;color:rgba(255,255,255,0.22);align-self:flex-end;}
 
+/* ===== KY ===== */
 #ky-page{display:none;flex-direction:column;height:100vh;}
 #toolbar{
   display:flex;align-items:center;gap:8px;padding:8px 12px;
@@ -73,20 +75,40 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 #clear-btn{background:rgba(231,76,60,0.5);border-color:#e74c3c;}
 
 #scroll-area{flex:1;overflow:auto;padding:16px;display:flex;justify-content:center;background:#f0f0f0;}
+
+/* フォームラッパー：HTML＋キャンバスを重ねる */
 #form-wrap{position:relative;width:1123px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
-#ky-form{width:1123px;padding:14px 14px 8px;font-size:10px;position:relative;z-index:1;pointer-events:none;}
+#ky-form{
+  width:1123px;padding:14px 14px 8px;font-size:10px;
+  position:relative;z-index:1;
+  /* キャンバスが上に重なるのでpointer-eventsはinputのみ有効 */
+  pointer-events:none;
+}
 #ky-form input{pointer-events:all;}
-#draw-canvas{position:absolute;top:0;left:0;width:1123px;height:100%;cursor:crosshair;z-index:10;touch-action:none;}
+#draw-canvas{
+  position:absolute;top:0;left:0;width:1123px;height:100%;
+  cursor:crosshair;z-index:10;touch-action:none;
+}
 
 table{border-collapse:collapse;width:100%;}
-td,th{border:1px solid #333;padding:2px 4px;font-size:9px;}
-.lbl{background:#e7ecf3;font-weight:600;text-align:center;vertical-align:middle;}
-.title-row{background:#30608a;color:#fff;font-weight:700;text-align:center;font-size:9px;}
-.form-title{text-align:center;font-size:16px;font-weight:700;padding:4px;border:2px solid #333;margin-bottom:6px;}
-.sub-title{text-align:center;font-size:9px;margin-bottom:2px;color:#444;}
-input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:transparent;font-family:inherit;}
-.legend{font-size:8px;background:#f5f5f5;border:1px solid #333;padding:3px 6px;margin-top:4px;}
+td,th{border:1px solid #222;padding:2px 4px;font-size:9px;}
 
+/* ★ ラベル背景色を濃く統一 */
+.lbl{
+  background:#30608a;   /* 「危険のポイント」ヘッダと同じ紺 */
+  color:#fff;
+  font-weight:700;
+  text-align:center;
+  vertical-align:middle;
+}
+.title-row{background:#1a3f60;color:#fff;font-weight:700;text-align:center;font-size:9px;}
+
+.form-title{text-align:center;font-size:16px;font-weight:700;padding:4px;border:2px solid #222;margin-bottom:6px;background:#fff;color:#000;}
+.sub-title{text-align:center;font-size:9px;margin-bottom:2px;color:#333;}
+input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:transparent;font-family:inherit;color:#000;}
+.legend{font-size:8px;background:#dde4ed;border:1px solid #222;padding:3px 6px;margin-top:4px;color:#000;}
+
+/* modal */
 #modal-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
   z-index:1000;align-items:center;justify-content:center;
@@ -100,10 +122,18 @@ input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:tr
 #modal-ok{background:#e74c3c;color:#fff;}
 #modal-cancel{background:#eee;color:#333;}
 
+/* PDF生成中オーバーレイ */
+#pdf-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);
+  z-index:2000;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+#pdf-overlay.show{display:flex;}
+#pdf-overlay p{font-size:16px;font-weight:600;}
+
 #toast{
   display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);
   background:rgba(46,204,113,0.95);color:#fff;padding:10px 24px;
-  border-radius:24px;font-size:14px;z-index:2000;white-space:nowrap;
+  border-radius:24px;font-size:14px;z-index:3000;white-space:nowrap;
 }
 #toast.show{display:block;}
 
@@ -116,53 +146,42 @@ input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:tr
 </head>
 <body>
 
+<!-- TOP -->
 <div id="top-page">
   <div id="top-header">
     <h1>現場管理システム</h1>
     <p>使用する機能を選択してください</p>
   </div>
   <div id="top-grid">
-
     <div class="app-card" onclick="openKY()">
       <span class="card-badge badge-active">利用可能</span>
       <div class="card-icon">📋</div>
-      <div>
-        <div class="card-title">KY活動記録</div>
-        <div class="card-desc">危険予知活動表の作成・手書き入力・PDF出力</div>
-      </div>
+      <div><div class="card-title">KY活動記録</div>
+      <div class="card-desc">危険予知活動表の作成・手書き入力・PDF出力</div></div>
       <div class="card-arrow">→</div>
     </div>
-
     <div class="app-card coming">
       <span class="card-badge badge-coming">準備中</span>
       <div class="card-icon">📝</div>
-      <div>
-        <div class="card-title">作業日報</div>
-        <div class="card-desc">日々の作業内容・進捗・工数を記録</div>
-      </div>
+      <div><div class="card-title">作業日報</div>
+      <div class="card-desc">日々の作業内容・進捗・工数を記録</div></div>
     </div>
-
     <div class="app-card coming">
       <span class="card-badge badge-coming">準備中</span>
       <div class="card-icon">🦺</div>
-      <div>
-        <div class="card-title">安全パトロール記録</div>
-        <div class="card-desc">パトロール結果・指摘事項・改善確認</div>
-      </div>
+      <div><div class="card-title">安全パトロール記録</div>
+      <div class="card-desc">パトロール結果・指摘事項・改善確認</div></div>
     </div>
-
     <div class="app-card coming">
       <span class="card-badge badge-coming">準備中</span>
       <div class="card-icon">🔧</div>
-      <div>
-        <div class="card-title">設備点検記録</div>
-        <div class="card-desc">設備の定期点検・異常報告・整備履歴</div>
-      </div>
+      <div><div class="card-title">設備点検記録</div>
+      <div class="card-desc">設備の定期点検・異常報告・整備履歴</div></div>
     </div>
-
   </div>
 </div>
 
+<!-- KY -->
 <div id="ky-page">
   <div id="toolbar">
     <button id="back-btn" onclick="goTop()">← TOP</button>
@@ -200,34 +219,38 @@ input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:tr
       <div id="ky-form">
         <div class="sub-title">リスクアセスメントKY活動</div>
         <div class="form-title" id="form-title-text">　　月　　日（　）の危険予知活動表</div>
+
         <table style="margin-bottom:4px;">
           <tr>
             <td class="lbl" style="width:13%;">会社名</td>
-            <td style="width:24%;"><input class="cell-input" id="company" placeholder="会社名を入力"></td>
+            <td style="width:24%;background:#fff;"><input class="cell-input" id="company" placeholder="会社名を入力"></td>
             <td class="lbl" style="width:13%;">グループ名</td>
-            <td style="width:24%;"><input class="cell-input" id="group" placeholder="グループ・工区名"></td>
+            <td style="width:24%;background:#fff;"><input class="cell-input" id="group" placeholder="グループ・工区名"></td>
             <td class="lbl" style="width:10%;">リーダー名</td>
-            <td style="width:16%;"><input class="cell-input" id="leader" placeholder="氏名"></td>
+            <td style="width:16%;background:#fff;"><input class="cell-input" id="leader" placeholder="氏名"></td>
           </tr>
         </table>
+
         <table style="margin-bottom:4px;">
           <thead>
             <tr>
               <th class="lbl" style="width:14%;font-size:8px;">参加者名<br>（サイン）</th>
-              <th class="lbl" style="width:10.75%;"></th><th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th><th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th><th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th><th class="lbl" style="width:10.75%;"></th>
+              <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
+              <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
+              <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
+              <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
             </tr>
           </thead>
           <tbody id="participant-body"></tbody>
         </table>
+
         <table style="margin-bottom:4px;">
           <tr>
             <td class="lbl" style="width:14%;">作業内容</td>
-            <td><input class="cell-input" id="work-content" placeholder="本日の作業内容を入力"></td>
+            <td style="background:#fff;"><input class="cell-input" id="work-content" placeholder="本日の作業内容を入力"></td>
           </tr>
         </table>
+
         <table>
           <thead>
             <tr>
@@ -240,10 +263,10 @@ input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:tr
             </tr>
           </thead>
           <tbody>
-            <tr><td style="height:44px;"></td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td style="height:44px;"></td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td style="height:44px;"></td><td></td><td></td><td></td><td></td><td></td></tr>
-            <tr><td style="height:44px;"></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td style="height:44px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
+            <tr><td style="height:44px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
+            <tr><td style="height:44px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
+            <tr><td style="height:44px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
           </tbody>
         </table>
         <div class="legend">☆程度（A）：致命的5　重傷3　軽傷1　　☆可能性（B）：よくある5　たまにある3　あまりない1　　☆危険度（リスク）：15〜25 重　9 中　1〜5 低</div>
@@ -253,6 +276,7 @@ input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:tr
   </div>
 </div>
 
+<!-- modal -->
 <div id="modal-overlay">
   <div id="modal">
     <h2>手書きをクリア</h2>
@@ -263,31 +287,37 @@ input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:tr
     </div>
   </div>
 </div>
+
+<!-- PDF生成中 -->
+<div id="pdf-overlay">
+  <p>📄 PDF生成中...</p>
+</div>
+
 <div id="toast">✓ 保存しました</div>
 
 <script>
-const canvas=document.getElementById('draw-canvas');
-const ctx=canvas.getContext('2d');
-const formWrap=document.getElementById('form-wrap');
-let mode='pen',currentColor='#111',currentSize=2;
-let drawing=false,lastX=0,lastY=0;
-let historyStack=[],redoStack=[],savedImageData=null;
+const canvas = document.getElementById('draw-canvas');
+const ctx = canvas.getContext('2d');
+const formWrap = document.getElementById('form-wrap');
+let mode='pen', currentColor='#111', currentSize=2;
+let drawing=false, lastX=0, lastY=0;
+let historyStack=[], redoStack=[], savedImageData=null;
 
 function openKY(){
   document.getElementById('top-page').style.display='none';
   document.getElementById('ky-page').style.display='flex';
   updateTitle();
-  setTimeout(()=>{resizeCanvas();loadLocal();},50);
+  setTimeout(()=>{ resizeCanvas(); loadLocal(); }, 80);
 }
 function goTop(){
   document.getElementById('ky-page').style.display='none';
   document.getElementById('top-page').style.display='flex';
 }
 function resizeCanvas(){
-  const h=document.getElementById('ky-form').offsetHeight;
-  canvas.width=1123;canvas.height=h;
-  formWrap.style.height=h+'px';
-  if(savedImageData)ctx.putImageData(savedImageData,0,0);
+  const h = document.getElementById('ky-form').offsetHeight;
+  canvas.width = 1123; canvas.height = h;
+  formWrap.style.height = h + 'px';
+  if(savedImageData) ctx.putImageData(savedImageData, 0, 0);
 }
 function buildParticipants(){
   const rows=[
@@ -301,42 +331,44 @@ function buildParticipants(){
   rows.forEach(r=>{
     const tr=document.createElement('tr');
     let c=`<td class="lbl" style="font-size:8px;height:${r.h}px;">${r.label}</td>`;
-    for(let i=0;i<8;i++)c+=`<td style="height:${r.h}px;"></td>`;
-    tr.innerHTML=c;tbody.appendChild(tr);
+    for(let i=0;i<8;i++) c+=`<td style="height:${r.h}px;background:#fff;"></td>`;
+    tr.innerHTML=c; tbody.appendChild(tr);
   });
 }
 function updateTitle(){
-  const now=new Date(),m=now.getMonth()+1,d=now.getDate();
+  const now=new Date(), m=now.getMonth()+1, d=now.getDate();
   const days=['日','月','火','水','木','金','土'];
   document.getElementById('form-title-text').textContent=
     `${String(m).padStart(2,'0')}月${String(d).padStart(2,'0')}日（${days[now.getDay()]}）の危険予知活動表`;
 }
+
+/* 描画 */
 function getPos(e){
   const rect=canvas.getBoundingClientRect();
-  const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
+  const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
   let cx,cy;
   if(e.touches){cx=e.touches[0].clientX;cy=e.touches[0].clientY;}
   else{cx=e.clientX;cy=e.clientY;}
-  return{x:(cx-rect.left)*sx,y:(cy-rect.top)*sy};
+  return{x:(cx-rect.left)*sx, y:(cy-rect.top)*sy};
 }
 function startDraw(e){
-  e.preventDefault();drawing=true;
-  const p=getPos(e);lastX=p.x;lastY=p.y;
-  saveHistory();ctx.beginPath();ctx.moveTo(lastX,lastY);
+  e.preventDefault(); drawing=true;
+  const p=getPos(e); lastX=p.x; lastY=p.y;
+  saveHistory(); ctx.beginPath(); ctx.moveTo(lastX,lastY);
 }
 function draw(e){
-  if(!drawing)return;e.preventDefault();
+  if(!drawing) return; e.preventDefault();
   const p=getPos(e);
-  ctx.lineWidth=mode==='eraser'?currentSize*4:currentSize;
-  ctx.lineCap='round';ctx.lineJoin='round';
-  ctx.strokeStyle=mode==='eraser'?'rgba(0,0,0,1)':currentColor;
-  ctx.globalCompositeOperation=mode==='eraser'?'destination-out':'source-over';
-  ctx.lineTo(p.x,p.y);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(p.x,p.y);
-  lastX=p.x;lastY=p.y;
+  ctx.lineWidth = mode==='eraser' ? currentSize*4 : currentSize;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle = mode==='eraser' ? 'rgba(0,0,0,1)' : currentColor;
+  ctx.globalCompositeOperation = mode==='eraser' ? 'destination-out' : 'source-over';
+  ctx.lineTo(p.x,p.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(p.x,p.y);
+  lastX=p.x; lastY=p.y;
 }
 function endDraw(){
-  if(!drawing)return;drawing=false;
+  if(!drawing) return; drawing=false;
   ctx.globalCompositeOperation='source-over';
   savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);
 }
@@ -349,16 +381,16 @@ canvas.addEventListener('touchend',endDraw);
 
 function saveHistory(){
   historyStack.push(ctx.getImageData(0,0,canvas.width,canvas.height));
-  if(historyStack.length>30)historyStack.shift();redoStack=[];
+  if(historyStack.length>30) historyStack.shift(); redoStack=[];
 }
 function undo(){
-  if(!historyStack.length)return;
+  if(!historyStack.length) return;
   redoStack.push(ctx.getImageData(0,0,canvas.width,canvas.height));
   ctx.putImageData(historyStack.pop(),0,0);
   savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);
 }
 function redo(){
-  if(!redoStack.length)return;
+  if(!redoStack.length) return;
   historyStack.push(ctx.getImageData(0,0,canvas.width,canvas.height));
   ctx.putImageData(redoStack.pop(),0,0);
   savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);
@@ -369,7 +401,7 @@ function setMode(m){
   document.getElementById('eraser-btn').classList.toggle('active',m==='eraser');
 }
 function setColor(c){
-  currentColor=c;setMode('pen');
+  currentColor=c; setMode('pen');
   document.querySelectorAll('.color-dot').forEach(d=>d.classList.toggle('active',d.style.background===c));
 }
 function setSize(s){
@@ -381,11 +413,11 @@ function setSize(s){
 function confirmClear(){document.getElementById('modal-overlay').classList.add('show');}
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
 function doClear(){
-  saveHistory();ctx.clearRect(0,0,canvas.width,canvas.height);
-  savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);closeModal();
+  saveHistory(); ctx.clearRect(0,0,canvas.width,canvas.height);
+  savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height); closeModal();
 }
 function showToast(){
-  const t=document.getElementById('toast');t.classList.add('show');
+  const t=document.getElementById('toast'); t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2000);
 }
 function saveLocal(){
@@ -394,11 +426,12 @@ function saveLocal(){
     group:document.getElementById('group').value,
     leader:document.getElementById('leader').value,
     workContent:document.getElementById('work-content').value,
-    drawing:canvas.toDataURL(),savedAt:new Date().toISOString()
-  }));showToast();
+    drawing:canvas.toDataURL(),
+    savedAt:new Date().toISOString()
+  })); showToast();
 }
 function loadLocal(){
-  const raw=localStorage.getItem('ky_record_latest');if(!raw)return;
+  const raw=localStorage.getItem('ky_record_latest'); if(!raw) return;
   const data=JSON.parse(raw);
   document.getElementById('company').value=data.company||'';
   document.getElementById('group').value=data.group||'';
@@ -406,25 +439,69 @@ function loadLocal(){
   document.getElementById('work-content').value=data.workContent||'';
   if(data.drawing){
     const img=new Image();
-    img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0);savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);};
+    img.onload=()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0);
+      savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+    };
     img.src=data.drawing;
   }
 }
+
+/* ===== PDF出力（html2canvas でフォーム全体を画像化） ===== */
 async function exportPDF(){
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  const formH=document.getElementById('ky-form').offsetHeight;
-  const tmp=document.createElement('canvas');
-  tmp.width=1123;tmp.height=formH;
-  const tc=tmp.getContext('2d');
-  tc.fillStyle='#fff';tc.fillRect(0,0,1123,formH);
-  tc.drawImage(canvas,0,0);
-  doc.addImage(tmp.toDataURL('image/jpeg',0.92),'JPEG',4,4,289,202);
-  const group=document.getElementById('group').value||'未設定';
-  const now=new Date();
-  const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-  doc.save(`KY_${ds}_${group}.pdf`);
+  const overlay=document.getElementById('pdf-overlay');
+  overlay.classList.add('show');
+
+  try{
+    /* キャンバスの手書きをフォームHTML上に合成するため
+       一時的にcanvasを非表示にしてhtml2canvasで取得後、合成する */
+    canvas.style.display='none';
+
+    const formEl=document.getElementById('form-wrap');
+    const formCanvas=await html2canvas(formEl,{
+      scale:2,
+      useCORS:true,
+      backgroundColor:'#ffffff',
+      logging:false
+    });
+
+    canvas.style.display='block';
+
+    /* formCanvas に手書きcanvasを重ねて合成 */
+    const mergedCanvas=document.createElement('canvas');
+    mergedCanvas.width=formCanvas.width;
+    mergedCanvas.height=formCanvas.height;
+    const mc=mergedCanvas.getContext('2d');
+    mc.drawImage(formCanvas,0,0);
+
+    /* 手書きを同じスケールで描画 */
+    const scale=formCanvas.width/canvas.width;
+    mc.save();
+    mc.scale(scale,scale);
+    mc.drawImage(canvas,0,0);
+    mc.restore();
+
+    const imgData=mergedCanvas.toDataURL('image/jpeg',0.95);
+
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    /* A4横: 297×210mm、余白4mm */
+    doc.addImage(imgData,'JPEG',4,4,289,202);
+
+    const group=document.getElementById('group').value||'未設定';
+    const now=new Date();
+    const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    doc.save(`KY_${ds}_${group}.pdf`);
+
+  }catch(err){
+    canvas.style.display='block';
+    alert('PDF生成中にエラーが発生しました: '+err.message);
+  }finally{
+    overlay.classList.remove('show');
+  }
 }
+
 buildParticipants();
 </script>
 </body>
