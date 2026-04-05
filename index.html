@@ -97,6 +97,7 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
   position:relative;z-index:1;pointer-events:none;
 }
 #ky-form input{pointer-events:all;}
+/* input フォーカス解除時にピンチ・スクロール状態をリセット */
 
 /* キャンバス：絶対配置でフォームの上に重ねる */
 #draw-canvas{
@@ -224,10 +225,19 @@ input.cell-input{border:none;outline:none;width:100%;font-size:13px;background:t
       <div class="size-btn" id="sz-thick" onclick="setSize(9)"><div class="size-dot" style="width:12px;height:12px;"></div></div>
     </div>
     <div class="tb-sep"></div>
+    <div class="tb-group" style="flex-direction:column;gap:1px;align-items:center;">
+      <div style="display:flex;gap:4px;">
+        <button class="tb-btn" style="opacity:0.4;cursor:not-allowed;" disabled>↩ 戻す</button>
+        <button class="tb-btn" style="opacity:0.4;cursor:not-allowed;" disabled>↪ やり直し</button>
+      </div>
+      <span style="font-size:9px;color:rgba(255,255,255,0.4);">未実装</span>
+    </div>
+    <!-- Undo/Redo 将来再実装用（コメントアウト）
     <div class="tb-group">
       <button class="tb-btn" onclick="undo()">↩ 戻す</button>
       <button class="tb-btn" onclick="redo()">↪ やり直し</button>
     </div>
+    -->
     <div class="tb-sep"></div>
     <button class="tb-btn" id="clear-btn" onclick="confirmClear()">クリア</button>
     <button class="tb-btn" id="new-btn" onclick="newRecord()">＋ 新規</button>
@@ -352,17 +362,27 @@ let currentRecordId = null;
 // iOSのコンテキストメニュー・テキスト選択をページ全体で完全ブロック
 document.addEventListener('contextmenu',  e => e.preventDefault(), { passive: false });
 document.addEventListener('selectstart',  e => e.preventDefault(), { passive: false });
-document.addEventListener('touchstart',   e => {
-  // キャンバス上のタッチはPointerEventsで処理するのでここでは何もしない
-}, { passive: true });
+document.addEventListener('touchstart',   e => {}, { passive: true });
+
+// input フォーカス解除時にピンチ・描画状態をリセット
+document.addEventListener('focusout', (e) => {
+  if (e.target.tagName === 'INPUT') {
+    drawing = false;
+    pinching = false;
+    activePointers.clear();
+    ctx.globalCompositeOperation = 'source-over';
+    // スクロールエリアの高さを元に戻す
+    scrollArea.style.height = '';
+    document.getElementById('ky-page').style.transform = '';
+  }
+});
 
 /* ===================================================
    初期化・リサイズ
 =================================================== */
 function initFormSize() {
-  // scrollAreaの実際の幅を基準にする（余白なし）
   const areaW = scrollArea.clientWidth || window.innerWidth;
-  FORM_W = Math.max(areaW - 8, 320); // 左右4pxパディング分のみ引く
+  FORM_W = Math.max(areaW - 8, 320);
   formWrap.style.width = FORM_W + 'px';
   document.getElementById('ky-form').style.width = FORM_W + 'px';
 }
@@ -370,25 +390,18 @@ function initFormSize() {
 function resizeCanvas() {
   const form = document.getElementById('ky-form');
   const formNaturalH = form.offsetHeight;
-  // 画面の高さ（ツールバー・インジケーター分を引く）
   const toolbarH = document.getElementById('toolbar').offsetHeight +
                    document.getElementById('draw-indicator').offsetHeight;
-  const screenH = window.innerHeight - toolbarH - 8;
-  // フォームの自然な高さ か 画面高さ の大きい方
+  // visualViewport対応：キーボード表示時は実際の表示高さを使う
+  const viewH = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  const screenH = viewH - toolbarH - 8;
   FORM_H = Math.max(formNaturalH, screenH);
 
-  // form-wrapの高さを拡張（KY用紙の下に余白を追加）
   formWrap.style.height = FORM_H + 'px';
-
-  // CSSサイズ
   canvas.style.width  = FORM_W + 'px';
   canvas.style.height = FORM_H + 'px';
-
-  // 実ピクセル（高解像度）
   canvas.width  = Math.round(FORM_W * DPR);
   canvas.height = Math.round(FORM_H * DPR);
-
-  // スケールを設定してDPR分を吸収
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
   if (savedImageData) {
@@ -400,6 +413,27 @@ function resizeCanvas() {
     };
     img.src = savedImageData;
   }
+}
+
+// キーボード表示・非表示時（visualViewport変化）に再計算
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    if (document.getElementById('ky-page').style.display === 'flex') {
+      // キャンバスサイズは変えずスクロールエリアの高さだけ調整
+      // （キャンバスリサイズすると描画内容が消えるため）
+      const toolbarH = document.getElementById('toolbar').offsetHeight +
+                       document.getElementById('draw-indicator').offsetHeight;
+      const viewH = window.visualViewport.height;
+      scrollArea.style.height = (viewH - toolbarH) + 'px';
+    }
+  });
+  window.visualViewport.addEventListener('scroll', () => {
+    // iOSキーボード表示時のスクロールオフセットを補正
+    if (document.getElementById('ky-page').style.display === 'flex') {
+      document.getElementById('ky-page').style.transform =
+        `translateY(${window.visualViewport.offsetTop}px)`;
+    }
+  });
 }
 
 function saveHistory() {
