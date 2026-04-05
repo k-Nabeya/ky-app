@@ -73,15 +73,14 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 #scroll-area{
   flex:1;overflow:auto;
   background:#e8e8e8;
-  /* タッチ操作はJS側で制御 */
+  padding:4px;
 }
 
 #form-wrap{
   position:relative;
-  /* 幅はJSで画面幅に合わせて設定 */
   background:#fff;
   box-shadow:0 2px 12px rgba(0,0,0,0.25);
-  margin:12px auto;
+  margin:0;
 }
 
 #ky-form{
@@ -94,8 +93,7 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 #draw-canvas{
   position:absolute;top:0;left:0;
   z-index:10;
-  /* pan/pinchはブラウザに任せる。1本指描画はJS側で判定 */
-  touch-action:pan-x pan-y pinch-zoom;
+  touch-action:none;
 }
 
 table{border-collapse:collapse;width:100%;}
@@ -342,8 +340,9 @@ let currentRecordId = null;
    初期化・リサイズ
 =================================================== */
 function initFormSize() {
-  // 画面幅 - 左右マージン24px
-  FORM_W = Math.min(window.innerWidth - 24, 1123);
+  // scrollAreaの実際の幅を基準にする（余白なし）
+  const areaW = scrollArea.clientWidth || window.innerWidth;
+  FORM_W = Math.max(areaW - 8, 320); // 左右4pxパディング分のみ引く
   formWrap.style.width = FORM_W + 'px';
   document.getElementById('ky-form').style.width = FORM_W + 'px';
 }
@@ -404,41 +403,86 @@ function goTop() {
 /* ===================================================
    タッチ制御（1本指=描画、2本指=スクロール/ピンチ）
 =================================================== */
-canvas.addEventListener('touchstart', onTouchStart, { passive: true });
-canvas.addEventListener('touchmove',  onTouchMove,  { passive: true });
-canvas.addEventListener('touchend',   onTouchEnd,   { passive: true });
+canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
+canvas.addEventListener('touchend',   onTouchEnd,   { passive: false });
+canvas.addEventListener('touchcancel',onTouchEnd,   { passive: false });
+
+// ピンチ状態管理
+let pinching = false;
+let lastPinchDist = 0;
+
+function getPinchDist(e) {
+  const dx = e.touches[0].clientX - e.touches[1].clientX;
+  const dy = e.touches[0].clientY - e.touches[1].clientY;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+function getPinchCenter(e) {
+  return {
+    x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+    y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+  };
+}
+
+// 現在のズームスケールとスクロール位置
+let currentScale = 1;
+let MIN_SCALE = 1, MAX_SCALE = 4;
 
 function onTouchStart(e) {
-  if (e.touches.length === 1) {
-    // 1本指 → 描画開始（preventDefault不要：touch-actionで許可済み）
+  e.preventDefault();
+  if (e.touches.length === 1 && !pinching) {
+    // 1本指 → 描画開始
     drawing = true;
     const p = getTouchPos(e.touches[0]);
     lastX = p.x; lastY = p.y;
     saveHistory();
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
-  } else {
-    // 2本指以上 → 描画キャンセル、ブラウザのピンチ/スクロールに委譲
+  } else if (e.touches.length === 2) {
+    // 2本指 → ピンチ開始
     drawing = false;
+    pinching = true;
+    lastPinchDist = getPinchDist(e);
   }
 }
 
 function onTouchMove(e) {
-  if (e.touches.length === 1 && drawing) {
+  e.preventDefault();
+  if (e.touches.length === 1 && drawing && !pinching) {
+    // 1本指描画
     const p = getTouchPos(e.touches[0]);
     doStroke(p.x, p.y);
-  } else if (e.touches.length >= 2) {
-    // 2本指になったら描画停止
-    drawing = false;
+  } else if (e.touches.length === 2 && pinching) {
+    // 2本指ピンチ → form-wrapをscale変換
+    const dist = getPinchDist(e);
+    const ratio = dist / lastPinchDist;
+    lastPinchDist = dist;
+
+    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale * ratio));
+    if (newScale !== currentScale) {
+      currentScale = newScale;
+      applyScale();
+    }
   }
 }
 
 function onTouchEnd(e) {
-  if (drawing) {
-    drawing = false;
-    ctx.globalCompositeOperation = 'source-over';
-    savedImageData = captureImageData();
+  e.preventDefault();
+  if (e.touches.length < 2) pinching = false;
+  if (e.touches.length === 0) {
+    if (drawing) {
+      drawing = false;
+      ctx.globalCompositeOperation = 'source-over';
+      savedImageData = captureImageData();
+    }
   }
+}
+
+function applyScale() {
+  formWrap.style.transformOrigin = 'top left';
+  formWrap.style.transform = `scale(${currentScale})`;
+  // スクロールエリアの仮想サイズを更新
+  formWrap.style.marginBottom = (FORM_H * currentScale - FORM_H) + 'px';
 }
 
 // マウス操作
@@ -465,11 +509,10 @@ canvas.addEventListener('mouseup', () => {
 
 function getTouchPos(touch) {
   const rect = canvas.getBoundingClientRect();
-  // getBoundingClientRect はCSSサイズ（論理px）
-  // canvas内座標もDPRスケール適用後なので論理pxで計算
+  // getBoundingClientRectはscale後のサイズを返すので補正不要
   return {
-    x: (touch.clientX - rect.left) * (FORM_W / rect.width),
-    y: (touch.clientY - rect.top)  * (FORM_H / rect.height)
+    x: (touch.clientX - rect.left) / currentScale,
+    y: (touch.clientY - rect.top)  / currentScale
   };
 }
 function getMousePos(e) {
