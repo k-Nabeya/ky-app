@@ -97,13 +97,13 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 }
 
 table{border-collapse:collapse;width:100%;}
-td,th{border:1px solid #222;padding:2px 4px;font-size:9px;}
+td,th{border:1px solid #222;padding:6px 8px;font-size:13px;}
 .lbl{background:#30608a;color:#fff;font-weight:700;text-align:center;vertical-align:middle;}
-.title-row{background:#1a3f60;color:#fff;font-weight:700;text-align:center;font-size:9px;}
-.form-title{text-align:center;font-size:16px;font-weight:700;padding:4px;border:2px solid #222;margin-bottom:6px;background:#fff;color:#000;}
-.sub-title{text-align:center;font-size:9px;margin-bottom:2px;color:#333;}
-input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:transparent;font-family:inherit;color:#000;}
-.legend{font-size:8px;background:#dde4ed;border:1px solid #222;padding:3px 6px;margin-top:4px;color:#000;}
+.title-row{background:#1a3f60;color:#fff;font-weight:700;text-align:center;font-size:13px;}
+.form-title{text-align:center;font-size:22px;font-weight:700;padding:12px 4px;border:2px solid #222;margin-bottom:8px;background:#fff;color:#000;}
+.sub-title{text-align:center;font-size:13px;margin-bottom:4px;color:#333;}
+input.cell-input{border:none;outline:none;width:100%;font-size:13px;background:transparent;font-family:inherit;color:#000;padding:4px 0;}
+.legend{font-size:11px;background:#dde4ed;border:1px solid #222;padding:6px 10px;margin-top:6px;color:#000;}
 
 /* モーダル */
 #list-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;}
@@ -235,21 +235,21 @@ input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:tr
       <div id="ky-form">
         <div class="sub-title">リスクアセスメントKY活動</div>
         <div class="form-title" id="form-title-text">　　月　　日（　）の危険予知活動表</div>
-        <table style="margin-bottom:4px;">
+        <table style="margin-bottom:6px;">
           <tr>
-            <td class="lbl" style="width:13%;">会社名</td>
-            <td style="width:24%;background:#fff;"><input class="cell-input" id="company" placeholder="会社名を入力"></td>
-            <td class="lbl" style="width:13%;">グループ名</td>
-            <td style="width:24%;background:#fff;"><input class="cell-input" id="group" placeholder="グループ・工区名"></td>
-            <td class="lbl" style="width:10%;">リーダー名</td>
-            <td style="width:16%;background:#fff;"><input class="cell-input" id="leader" placeholder="氏名"></td>
+            <td class="lbl" style="width:13%;height:48px;font-size:14px;">会社名</td>
+            <td style="width:24%;background:#fff;height:48px;"><input class="cell-input" id="company" placeholder="会社名を入力"></td>
+            <td class="lbl" style="width:13%;height:48px;font-size:14px;">グループ名</td>
+            <td style="width:24%;background:#fff;height:48px;"><input class="cell-input" id="group" placeholder="グループ・工区名"></td>
+            <td class="lbl" style="width:10%;height:48px;font-size:14px;">リーダー名</td>
+            <td style="width:16%;background:#fff;height:48px;"><input class="cell-input" id="leader" placeholder="氏名"></td>
           </tr>
         </table>
-        <table style="margin-bottom:4px;">
+        <table style="margin-bottom:6px;">
           <thead>
             <tr>
-              <th class="lbl" style="width:14%;font-size:8px;">参加者名<br>（サイン）</th>
-              <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
+              <th class="lbl" style="width:14%;font-size:13px;height:52px;">参加者名<br>（サイン）</th>
+              <th style="width:10.75%;background:#fff;height:52px;"></th><th style="width:10.75%;background:#fff;"></th>
               <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
               <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
               <th style="width:10.75%;background:#fff;"></th><th style="width:10.75%;background:#fff;"></th>
@@ -257,28 +257,28 @@ input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:tr
           </thead>
           <tbody id="participant-body"></tbody>
         </table>
-        <table style="margin-bottom:4px;">
+        <table style="margin-bottom:6px;">
           <tr>
-            <td class="lbl" style="width:14%;">作業内容</td>
-            <td style="background:#fff;"><input class="cell-input" id="work-content" placeholder="本日の作業内容を入力"></td>
+            <td class="lbl" style="width:14%;height:52px;font-size:14px;">作業内容</td>
+            <td style="background:#fff;height:52px;"><input class="cell-input" id="work-content" placeholder="本日の作業内容を入力"></td>
           </tr>
         </table>
         <table>
           <thead>
             <tr>
-              <th class="title-row" style="width:31%;">危険のポイント</th>
-              <th class="title-row" style="width:9%;">程度A<br>1・3・5</th>
-              <th class="title-row" style="width:9%;">可能性B<br>1・3・5</th>
-              <th class="title-row" style="width:9%;">★危険度<br>A×B</th>
-              <th class="title-row" style="width:34%;">私たちはこうする！</th>
-              <th class="title-row" style="width:8%;">評価</th>
+              <th class="title-row" style="width:31%;height:52px;">危険のポイント</th>
+              <th class="title-row" style="width:9%;height:52px;">程度A<br>1・3・5</th>
+              <th class="title-row" style="width:9%;height:52px;">可能性B<br>1・3・5</th>
+              <th class="title-row" style="width:9%;height:52px;">★危険度<br>A×B</th>
+              <th class="title-row" style="width:34%;height:52px;">私たちはこうする！</th>
+              <th class="title-row" style="width:8%;height:52px;">評価</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td style="height:44px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
-            <tr><td style="height:44px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
-            <tr><td style="height:44px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
-            <tr><td style="height:44px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
+            <tr><td style="height:80px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
+            <tr><td style="height:80px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
+            <tr><td style="height:80px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
+            <tr><td style="height:80px;background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td><td style="background:#fff;"></td></tr>
           </tbody>
         </table>
         <div class="legend">☆程度（A）：致命的5　重傷3　軽傷1　　☆可能性（B）：よくある5　たまにある3　あまりない1　　☆危険度（リスク）：15〜25 重　9 中　1〜5 低</div>
@@ -733,16 +733,16 @@ function closeList() { document.getElementById('list-overlay').classList.remove(
 =================================================== */
 function buildParticipants() {
   const rows = [
-    {label:'体　調(AM)<br>よい○　悪い×',h:22},
-    {label:'体　調(PM)<br>よい○　悪い×',h:22},
-    {label:'体　温(AM)',h:22},{label:'体　温(PM)',h:22},
-    {label:'アルコール<br>チェック（出勤）',h:22},
-    {label:'アルコール<br>チェック（退勤）',h:22},
+    {label:'体　調(AM)<br>よい○　悪い×',h:44},
+    {label:'体　調(PM)<br>よい○　悪い×',h:44},
+    {label:'体　温(AM)',h:44},{label:'体　温(PM)',h:44},
+    {label:'アルコール<br>チェック（出勤）',h:44},
+    {label:'アルコール<br>チェック（退勤）',h:44},
   ];
   const tbody = document.getElementById('participant-body');
   rows.forEach(r => {
     const tr = document.createElement('tr');
-    let c = `<td class="lbl" style="font-size:8px;height:${r.h}px;">${r.label}</td>`;
+    let c = `<td class="lbl" style="font-size:12px;height:${r.h}px;">${r.label}</td>`;
     for (let i = 0; i < 8; i++) c += `<td style="height:${r.h}px;background:#fff;"></td>`;
     tr.innerHTML = c; tbody.appendChild(tr);
   });
