@@ -66,23 +66,30 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 #pdf-btn{background:#e67e22;border-color:#d35400;}
 #clear-btn{background:rgba(231,76,60,0.5);border-color:#e74c3c;}
 
-/* 描画モードインジケーター */
-#draw-indicator{
-  display:flex;align-items:center;gap:6px;padding:4px 10px;
-  background:#1a3a5a;border-bottom:2px solid #e67e22;
+/* 描画モードインジケーター → モード切替ボタンに変更 */
+#mode-switcher{
+  display:flex;align-items:center;gap:8px;padding:6px 10px;
+  background:#1a3a5a;border-bottom:3px solid #2ecc71;
   font-size:12px;color:#fff;flex-shrink:0;
 }
-#draw-indicator.pen-mode{border-bottom-color:#2ecc71;}
-#draw-indicator.eraser-mode{border-bottom-color:#e74c3c;}
-#indicator-icon{font-size:14px;}
-#indicator-text{flex:1;}
-#finger-hint{font-size:11px;color:rgba(255,255,255,0.55);}
+#mode-switcher.input-mode{border-bottom-color:#e67e22;}
+.mode-btn{
+  padding:5px 16px;border-radius:20px;border:none;font-size:13px;
+  font-weight:600;cursor:pointer;transition:all 0.15s;
+}
+#draw-mode-btn{background:#2ecc71;color:#fff;}
+#input-mode-btn{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);}
+#mode-switcher.input-mode #draw-mode-btn{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);}
+#mode-switcher.input-mode #input-mode-btn{background:#e67e22;color:#fff;}
+#mode-label{font-size:12px;color:rgba(255,255,255,0.7);flex:1;}
+#finger-hint{font-size:11px;color:rgba(255,255,255,0.45);}
 
-/* スクロールエリア：overflow:auto でピンチズーム・スクロール自由 */
 #scroll-area{
   flex:1;overflow:auto;
   background:#e8e8e8;
   padding:4px;
+  /* 入力モード時はブラウザのスクロール・ピンチを使う */
+  touch-action:auto;
 }
 
 #form-wrap{
@@ -94,20 +101,25 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-h
 
 #ky-form{
   padding:14px 14px 8px;font-size:10px;
-  position:relative;z-index:1;pointer-events:none;
+  position:relative;z-index:1;
 }
 #ky-form input{pointer-events:all;}
-/* input フォーカス解除時にピンチ・スクロール状態をリセット */
 
-/* キャンバス：絶対配置でフォームの上に重ねる */
+/* キャンバス：描画モード時のみ前面に出る */
 #draw-canvas{
   position:absolute;top:0;left:0;
   z-index:10;
   touch-action:none;
-  /* iOSのコンテキストメニュー・テキスト選択を無効化 */
   -webkit-touch-callout:none;
   -webkit-user-select:none;
   user-select:none;
+  /* 初期は描画モード（前面） */
+  pointer-events:auto;
+}
+/* 入力モード時はキャンバスを背後に */
+#draw-canvas.input-mode{
+  pointer-events:none;
+  z-index:0;
 }
 
 table{border-collapse:collapse;width:100%;}
@@ -246,11 +258,12 @@ input.cell-input{border:none;outline:none;width:100%;font-size:13px;background:t
     <button class="tb-btn" id="pdf-btn" onclick="exportPDF()">📄 PDF</button>
   </div>
 
-  <!-- 描画モードインジケーター -->
-  <div id="draw-indicator" class="pen-mode">
-    <span id="indicator-icon">✏️</span>
-    <span id="indicator-text">Apple Pencilで手書き</span>
-    <span id="finger-hint">指2本でスクロール・ピンチでズーム　手のひらは無視</span>
+  <!-- モード切替バー -->
+  <div id="mode-switcher">
+    <button class="mode-btn" id="draw-mode-btn" onclick="setAppMode('draw')">✏️ 手書き</button>
+    <button class="mode-btn" id="input-mode-btn" onclick="setAppMode('input')">⌨️ 文字入力</button>
+    <span id="mode-label">手書きモード：Apple Pencilで描画、2本指でスクロール</span>
+    <span id="finger-hint"></span>
   </div>
 
   <div id="scroll-area">
@@ -360,22 +373,46 @@ let historyStack = [], redoStack = [], savedImageData = null;
 let currentRecordId = null;
 
 // iOSのコンテキストメニュー・テキスト選択をページ全体で完全ブロック
-document.addEventListener('contextmenu',  e => e.preventDefault(), { passive: false });
-document.addEventListener('selectstart',  e => e.preventDefault(), { passive: false });
-document.addEventListener('touchstart',   e => {}, { passive: true });
+document.addEventListener('contextmenu', e => e.preventDefault(), { passive: false });
+document.addEventListener('selectstart', e => e.preventDefault(), { passive: false });
 
-// input フォーカス解除時にピンチ・描画状態をリセット
-document.addEventListener('focusout', (e) => {
-  if (e.target.tagName === 'INPUT') {
+/* ===================================================
+   アプリモード管理
+   draw  : 手書きモード（キャンバス前面・ブラウザスクロール無効）
+   input : 文字入力モード（キャンバス背面・ブラウザ操作自由）
+=================================================== */
+let appMode = 'draw';
+
+function setAppMode(m) {
+  appMode = m;
+  const sw = document.getElementById('mode-switcher');
+  const lbl = document.getElementById('mode-label');
+
+  if (m === 'draw') {
+    // キャンバスを前面に・スクロールはJS制御
+    canvas.classList.remove('input-mode');
+    canvas.style.touchAction = 'none';
+    scrollArea.style.touchAction = 'none';
+    sw.classList.remove('input-mode');
+    lbl.textContent = '手書きモード：Apple Pencilで描画、2本指でスクロール・ピンチ';
+    // 状態リセット
+    drawing = false;
+    pinching = false;
+    activePointers.clear();
+  } else {
+    // キャンバスを背面に・ブラウザのスクロール・ピンチに委譲
+    canvas.classList.add('input-mode');
+    canvas.style.touchAction = 'auto';
+    scrollArea.style.touchAction = 'auto';
+    sw.classList.add('input-mode');
+    lbl.textContent = '入力モード：フォームに文字を入力、指でスクロール・ピンチ自由';
+    // 描画停止
     drawing = false;
     pinching = false;
     activePointers.clear();
     ctx.globalCompositeOperation = 'source-over';
-    // スクロールエリアの高さを元に戻す
-    scrollArea.style.height = '';
-    document.getElementById('ky-page').style.transform = '';
   }
-});
+}
 
 /* ===================================================
    初期化・リサイズ
@@ -391,10 +428,8 @@ function resizeCanvas() {
   const form = document.getElementById('ky-form');
   const formNaturalH = form.offsetHeight;
   const toolbarH = document.getElementById('toolbar').offsetHeight +
-                   document.getElementById('draw-indicator').offsetHeight;
-  // visualViewport対応：キーボード表示時は実際の表示高さを使う
-  const viewH = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
-  const screenH = viewH - toolbarH - 8;
+                   document.getElementById('mode-switcher').offsetHeight;
+  const screenH = window.innerHeight - toolbarH - 8;
   FORM_H = Math.max(formNaturalH, screenH);
 
   formWrap.style.height = FORM_H + 'px';
@@ -415,26 +450,12 @@ function resizeCanvas() {
   }
 }
 
-// キーボード表示・非表示時（visualViewport変化）に再計算
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => {
-    if (document.getElementById('ky-page').style.display === 'flex') {
-      // キャンバスサイズは変えずスクロールエリアの高さだけ調整
-      // （キャンバスリサイズすると描画内容が消えるため）
-      const toolbarH = document.getElementById('toolbar').offsetHeight +
-                       document.getElementById('draw-indicator').offsetHeight;
-      const viewH = window.visualViewport.height;
-      scrollArea.style.height = (viewH - toolbarH) + 'px';
-    }
-  });
-  window.visualViewport.addEventListener('scroll', () => {
-    // iOSキーボード表示時のスクロールオフセットを補正
-    if (document.getElementById('ky-page').style.display === 'flex') {
-      document.getElementById('ky-page').style.transform =
-        `translateY(${window.visualViewport.offsetTop}px)`;
-    }
-  });
-}
+// キーボード表示時も特別な処理不要（入力モードはブラウザに委譲）
+window.addEventListener('resize', () => {
+  if (document.getElementById('ky-page').style.display === 'flex' && appMode === 'draw') {
+    initFormSize();
+  }
+});
 
 function saveHistory() {
   // toDataURLは重いのでストローク完了時のみ実行
@@ -458,6 +479,7 @@ function openKY(recordId) {
   setTimeout(() => {
     initFormSize();
     resizeCanvas();
+    setAppMode('draw');
     if (recordId) loadRecord(recordId);
     else newRecord();
   }, 80);
@@ -620,16 +642,6 @@ function setMode(m) {
   mode = m;
   document.getElementById('pen-btn').classList.toggle('active', m === 'pen');
   document.getElementById('eraser-btn').classList.toggle('active', m === 'eraser');
-  const ind = document.getElementById('draw-indicator');
-  const icon = document.getElementById('indicator-icon');
-  const text = document.getElementById('indicator-text');
-  if (m === 'pen') {
-    ind.className = 'pen-mode'; icon.textContent = '✏️';
-    text.textContent = 'Apple Pencilで手書き';
-  } else {
-    ind.className = 'eraser-mode'; icon.textContent = '⬜';
-    text.textContent = '消しゴムモード：Apple Pencilでなぞって消去';
-  }
 }
 function setColor(c) {
   currentColor = c; setMode('pen');
