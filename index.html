@@ -327,7 +327,13 @@ function getTouches(e) {
   return Array.from(e.touches).map(t => ({ x: t.clientX, y: t.clientY }));
 }
 
+// Apple Pencil の touchType は 'stylus'。指タッチのみ処理する判定関数。
+function isFingerTouch(e) {
+  return Array.from(e.touches).every(t => t.touchType !== 'stylus');
+}
+
 scrollArea.addEventListener('touchstart', (e) => {
+  if (!isFingerTouch(e)) return;  // Pencilなら無視
   if (e.touches.length === 2) {
     e.preventDefault();
     initTouches = getTouches(e);
@@ -338,29 +344,17 @@ scrollArea.addEventListener('touchstart', (e) => {
 }, { passive: false });
 
 scrollArea.addEventListener('touchmove', (e) => {
+  if (!isFingerTouch(e)) return;  // Pencilなら無視
   if (e.touches.length === 2 && initTouches) {
     e.preventDefault();
-    const cur = getTouches(e);
-
-    // スケール変化量
+    const cur        = getTouches(e);
     const scaleDelta = dist(cur[0], cur[1]) / dist(initTouches[0], initTouches[1]);
-    const newScale   = Math.min(Math.max(initScale * scaleDelta, 0.4), 4);
+    const mid0       = midpoint(initTouches[0], initTouches[1]);
+    const mid1       = midpoint(cur[0],         cur[1]);
 
-    // ピンチ中心（画面座標）
-    const mid0 = midpoint(initTouches[0], initTouches[1]);
-    const mid1 = midpoint(cur[0],         cur[1]);
-
-    // パン量 + ピンチ中心補正
-    viewScale = newScale;
-    viewX = mid1.x - mid0.x * scaleDelta + initX * scaleDelta
-            + mid0.x * (1 - scaleDelta);
-    viewY = mid1.y - mid0.y * scaleDelta + initY * scaleDelta
-            + mid0.y * (1 - scaleDelta);
-
-    // シンプルに: スケール変更 + パン
+    viewScale = Math.min(Math.max(initScale * scaleDelta, 0.4), 4);
     viewX = initX + (mid1.x - mid0.x) + mid0.x * (1 - scaleDelta);
     viewY = initY + (mid1.y - mid0.y) + mid0.y * (1 - scaleDelta);
-
     applyTransform();
   }
 }, { passive: false });
@@ -369,17 +363,18 @@ scrollArea.addEventListener('touchend', (e) => {
   if (e.touches.length < 2) initTouches = null;
 }, { passive: true });
 
-// 1本指パン（ペンモード以外でも動かせるよう touchmove で処理）
+// 1本指パン（指のみ）
 let panStart = null;
 scrollArea.addEventListener('touchstart', (e) => {
+  if (!isFingerTouch(e)) return;  // Pencilなら無視
   if (e.touches.length === 1) {
     panStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, vx: viewX, vy: viewY };
   }
 }, { passive: true });
 
 scrollArea.addEventListener('touchmove', (e) => {
+  if (!isFingerTouch(e)) return;  // Pencilなら無視
   if (e.touches.length === 1 && panStart) {
-    // Apple Pencilはtouchイベントを発火しないのでここは必ず指
     e.preventDefault();
     viewX = panStart.vx + e.touches[0].clientX - panStart.x;
     viewY = panStart.vy + e.touches[0].clientY - panStart.y;
