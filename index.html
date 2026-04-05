@@ -436,6 +436,10 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 function onPenDown(e) {
   if (e.pointerType !== 'pen') return;
+  // pressure===0 はホバー接近による誤発火。実際に触れていないので無視する
+  if (e.pressure === 0) return;
+  // 2画目開始時に toDataURL タイマーが走ると pointermove を取りこぼすのでキャンセル
+  clearTimeout(_saveTimer);
   e.preventDefault();
   canvas.setPointerCapture(e.pointerId);
   drawing = true;
