@@ -434,48 +434,32 @@ canvas.addEventListener('pointerup',   onPenUp,   {passive:false});
 canvas.addEventListener('pointercancel', onPenUp, {passive:false});
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
-let pathStarted = false;  // onPenDown後、実際に筆圧>0で描画を開始したか
-
 function onPenDown(e) {
   if (e.pointerType !== 'pen') return;
-  // pressure===0 チェックを削除 → ペンが画面に近づいた時点で描画準備を開始する
-  // (pressure=0のpointerdownを弾くと、その後のpointermoveでdrawing=falseになり2画目が書けない)
+  // pressure=0（ペンが画面に近いが未接触）でも drawing=true にする
+  // ここで弾くと後続の pointermove が drawing=false で無視され画が書けない
   clearTimeout(_saveTimer);
   e.preventDefault();
   try { canvas.setPointerCapture(e.pointerId); } catch(_) {}
   drawing = true;
-  pathStarted = false;  // 実際の描画はpointermoveで筆圧>0になってから開始
   const p = penPos(e);
   lastX = p.x; lastY = p.y;
+  ctx.beginPath();
+  ctx.lineCap  = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = mode === 'eraser' ? currentSize * 4 : currentSize;
+  ctx.strokeStyle = currentColor;
+  ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
+  ctx.moveTo(lastX, lastY);
 }
 
 function onPenMove(e) {
   if (e.pointerType !== 'pen') return;
-  if (!drawing) return;
+  if (!drawing) return;   // pointerdown 前のホバーは drawing=false なので描かない
   e.preventDefault();
 
   const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
     ? e.getCoalescedEvents() : [e];
-
-  // パス未開始なら、筆圧>0のイベントが来るまで位置だけ更新
-  if (!pathStarted) {
-    const firstReal = events.find(ev => ev.pressure > 0);
-    if (!firstReal) {
-      // 全イベントがpressure=0（ホバー中）→ 位置更新のみ
-      const lp = penPos(events[events.length - 1]);
-      lastX = lp.x; lastY = lp.y;
-      return;
-    }
-    // 筆圧>0が来た → ここでパスとスタイルを初期化
-    ctx.beginPath();
-    ctx.lineCap  = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = mode === 'eraser' ? currentSize * 4 : currentSize;
-    ctx.strokeStyle = currentColor;
-    ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
-    ctx.moveTo(lastX, lastY);
-    pathStarted = true;
-  }
 
   for (const ev of events) {
     const p = penPos(ev);
@@ -503,7 +487,6 @@ function onPenUp(e) {
   if (e.pointerType !== 'pen') return;
   if (!drawing) return;
   drawing = false;
-  pathStarted = false;
   ctx.globalCompositeOperation = 'source-over';
   scheduleSnapshot();
 }
