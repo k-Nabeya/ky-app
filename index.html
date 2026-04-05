@@ -434,39 +434,51 @@ canvas.addEventListener('pointerup',   onPenUp,   {passive:false});
 canvas.addEventListener('pointercancel', onPenUp, {passive:false});
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
+let pathStarted = false;  // onPenDown後、実際に筆圧>0で描画を開始したか
+
 function onPenDown(e) {
   if (e.pointerType !== 'pen') return;
-  // pressure===0 はホバー接近による誤発火。実際に触れていないので無視する
-  if (e.pressure === 0) return;
-  // 2画目開始時に toDataURL タイマーが走ると pointermove を取りこぼすのでキャンセル
+  // pressure===0 チェックを削除 → ペンが画面に近づいた時点で描画準備を開始する
+  // (pressure=0のpointerdownを弾くと、その後のpointermoveでdrawing=falseになり2画目が書けない)
   clearTimeout(_saveTimer);
   e.preventDefault();
   try { canvas.setPointerCapture(e.pointerId); } catch(_) {}
-  drawing = true;  // 例外が出ても必ず実行されるよう try の外に置く
+  drawing = true;
+  pathStarted = false;  // 実際の描画はpointermoveで筆圧>0になってから開始
   const p = penPos(e);
   lastX = p.x; lastY = p.y;
-  // ストロークの開始
-  ctx.beginPath();
-  ctx.lineCap  = 'round';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = mode === 'eraser' ? currentSize * 4 : currentSize;
-  ctx.strokeStyle = currentColor;
-  ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
-  ctx.moveTo(lastX, lastY);
 }
 
 function onPenMove(e) {
   if (e.pointerType !== 'pen') return;
-  if (!drawing) return;    // hover中（drawing=false）はここで終了→preventDefault不要
+  if (!drawing) return;
   e.preventDefault();
 
-  // getCoalescedEvents で間引かれた中間点をすべて取得
   const events = (e.getCoalescedEvents && e.getCoalescedEvents().length > 0)
     ? e.getCoalescedEvents() : [e];
 
+  // パス未開始なら、筆圧>0のイベントが来るまで位置だけ更新
+  if (!pathStarted) {
+    const firstReal = events.find(ev => ev.pressure > 0);
+    if (!firstReal) {
+      // 全イベントがpressure=0（ホバー中）→ 位置更新のみ
+      const lp = penPos(events[events.length - 1]);
+      lastX = lp.x; lastY = lp.y;
+      return;
+    }
+    // 筆圧>0が来た → ここでパスとスタイルを初期化
+    ctx.beginPath();
+    ctx.lineCap  = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = mode === 'eraser' ? currentSize * 4 : currentSize;
+    ctx.strokeStyle = currentColor;
+    ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.moveTo(lastX, lastY);
+    pathStarted = true;
+  }
+
   for (const ev of events) {
     const p = penPos(ev);
-    // 前点と現在点の中間を制御点にしてベジェ曲線で補間 → 滑らか
     const midX = (lastX + p.x) / 2;
     const midY = (lastY + p.y) / 2;
     ctx.quadraticCurveTo(lastX, lastY, midX, midY);
@@ -491,8 +503,9 @@ function onPenUp(e) {
   if (e.pointerType !== 'pen') return;
   if (!drawing) return;
   drawing = false;
+  pathStarted = false;
   ctx.globalCompositeOperation = 'source-over';
-  scheduleSnapshot(); // ← 非同期化。メインスレッドをブロックしない
+  scheduleSnapshot();
 }
 
 function penPos(e) {
