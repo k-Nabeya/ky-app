@@ -349,7 +349,16 @@ function initFormSize() {
 
 function resizeCanvas() {
   const form = document.getElementById('ky-form');
-  FORM_H = form.offsetHeight;
+  const formNaturalH = form.offsetHeight;
+  // 画面の高さ（ツールバー・インジケーター分を引く）
+  const toolbarH = document.getElementById('toolbar').offsetHeight +
+                   document.getElementById('draw-indicator').offsetHeight;
+  const screenH = window.innerHeight - toolbarH - 8;
+  // フォームの自然な高さ か 画面高さ の大きい方
+  FORM_H = Math.max(formNaturalH, screenH);
+
+  // form-wrapの高さを拡張（KY用紙の下に余白を追加）
+  formWrap.style.height = FORM_H + 'px';
 
   // CSSサイズ
   canvas.style.width  = FORM_W + 'px';
@@ -362,10 +371,7 @@ function resizeCanvas() {
   // スケールを設定してDPR分を吸収
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  formWrap.style.height = FORM_H + 'px';
-
   if (savedImageData) {
-    // 保存データを再描画
     const img = new Image();
     img.onload = () => {
       ctx.clearRect(0, 0, FORM_W, FORM_H);
@@ -408,25 +414,25 @@ canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
 canvas.addEventListener('touchend',   onTouchEnd,   { passive: false });
 canvas.addEventListener('touchcancel',onTouchEnd,   { passive: false });
 
-// ピンチ状態管理
+// ピンチ・スクロール状態管理
 let pinching = false;
 let lastPinchDist = 0;
+let lastTwoFingerX = 0;
+let lastTwoFingerY = 0;
+let currentScale = 1;
+const MIN_SCALE = 1, MAX_SCALE = 4;
 
 function getPinchDist(e) {
   const dx = e.touches[0].clientX - e.touches[1].clientX;
   const dy = e.touches[0].clientY - e.touches[1].clientY;
   return Math.sqrt(dx*dx + dy*dy);
 }
-function getPinchCenter(e) {
+function getTwoFingerCenter(e) {
   return {
     x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
     y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
   };
 }
-
-// 現在のズームスケールとスクロール位置
-let currentScale = 1;
-let MIN_SCALE = 1, MAX_SCALE = 4;
 
 function onTouchStart(e) {
   e.preventDefault();
@@ -439,10 +445,13 @@ function onTouchStart(e) {
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
   } else if (e.touches.length === 2) {
-    // 2本指 → ピンチ開始
+    // 2本指 → ピンチ＋スクロール開始
     drawing = false;
     pinching = true;
     lastPinchDist = getPinchDist(e);
+    const c = getTwoFingerCenter(e);
+    lastTwoFingerX = c.x;
+    lastTwoFingerY = c.y;
   }
 }
 
@@ -452,17 +461,27 @@ function onTouchMove(e) {
     // 1本指描画
     const p = getTouchPos(e.touches[0]);
     doStroke(p.x, p.y);
-  } else if (e.touches.length === 2 && pinching) {
-    // 2本指ピンチ → form-wrapをscale変換
-    const dist = getPinchDist(e);
-    const ratio = dist / lastPinchDist;
-    lastPinchDist = dist;
 
+  } else if (e.touches.length === 2 && pinching) {
+    const dist = getPinchDist(e);
+    const center = getTwoFingerCenter(e);
+
+    // ピンチズーム
+    const ratio = dist / lastPinchDist;
     const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale * ratio));
-    if (newScale !== currentScale) {
+    if (Math.abs(newScale - currentScale) > 0.005) {
       currentScale = newScale;
       applyScale();
     }
+    lastPinchDist = dist;
+
+    // 2本指スクロール（中心点の移動量をスクロールに変換）
+    const dx = lastTwoFingerX - center.x;
+    const dy = lastTwoFingerY - center.y;
+    scrollArea.scrollLeft += dx;
+    scrollArea.scrollTop  += dy;
+    lastTwoFingerX = center.x;
+    lastTwoFingerY = center.y;
   }
 }
 
@@ -481,8 +500,9 @@ function onTouchEnd(e) {
 function applyScale() {
   formWrap.style.transformOrigin = 'top left';
   formWrap.style.transform = `scale(${currentScale})`;
-  // スクロールエリアの仮想サイズを更新
-  formWrap.style.marginBottom = (FORM_H * currentScale - FORM_H) + 'px';
+  // スクロールエリアの仮想サイズを確保
+  formWrap.style.marginBottom = (FORM_H * (currentScale - 1)) + 'px';
+  formWrap.style.marginRight  = (FORM_W * (currentScale - 1)) + 'px';
 }
 
 // マウス操作
