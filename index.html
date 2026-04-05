@@ -441,8 +441,8 @@ function onPenDown(e) {
   // 2画目開始時に toDataURL タイマーが走ると pointermove を取りこぼすのでキャンセル
   clearTimeout(_saveTimer);
   e.preventDefault();
-  canvas.setPointerCapture(e.pointerId);
-  drawing = true;
+  try { canvas.setPointerCapture(e.pointerId); } catch(_) {}
+  drawing = true;  // 例外が出ても必ず実行されるよう try の外に置く
   const p = penPos(e);
   lastX = p.x; lastY = p.y;
   // ストロークの開始
