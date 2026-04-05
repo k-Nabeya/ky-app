@@ -388,7 +388,14 @@ function resizeCanvas() {
   }
 }
 
-// imageDataの代わりにDataURLで保存（リサイズ対応）
+function saveHistory() {
+  // toDataURLは重いのでストローク完了時のみ実行
+  const dataUrl = canvas.toDataURL();
+  historyStack.push(dataUrl);
+  if (historyStack.length > 20) historyStack.shift();
+  redoStack = [];
+  savedImageData = dataUrl;
+}
 function captureImageData() {
   return canvas.toDataURL();
 }
@@ -445,17 +452,15 @@ function onPointerDown(e) {
   activePointers.set(e.pointerId, e);
 
   if (e.pointerType === 'pen' || e.pointerType === 'mouse') {
-    // ✅ Apple Pencil / マウス → 描画開始
     canvas.setPointerCapture(e.pointerId);
     drawing = true;
     const p = getPointerPos(e);
     lastX = p.x; lastY = p.y;
-    saveHistory();
+    // ストローク開始時はパスだけ準備（履歴取得はここでしない）
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
 
   } else if (e.pointerType === 'touch') {
-    // 指タッチ → ピンチ/スクロール管理
     drawing = false;
     if (activePointers.size === 2) {
       pinching = true;
@@ -474,31 +479,39 @@ function onPointerMove(e) {
   activePointers.set(e.pointerId, e);
 
   if ((e.pointerType === 'pen' || e.pointerType === 'mouse') && drawing) {
-    // Apple Pencil 描画
     const p = getPointerPos(e);
-    // 筆圧対応：pressureが取れる場合は線幅に反映
     const pressure = e.pressure > 0 ? e.pressure : 1;
-    const pressureSize = mode === 'eraser'
+    const sz = mode === 'eraser'
       ? currentSize * 4
       : currentSize * (0.5 + pressure * 1.0);
-    doStrokeWithSize(p.x, p.y, pressureSize);
+
+    ctx.lineWidth = sz;
+    ctx.lineCap   = 'round';
+    ctx.lineJoin  = 'round';
+    ctx.strokeStyle = mode === 'eraser' ? 'rgba(0,0,0,1)' : currentColor;
+    ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
+
+    // 連続パスで滑らかに（beginPathしない）
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    // 次の点のためにmoveToだけ（パスは継続）
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    lastX = p.x; lastY = p.y;
 
   } else if (e.pointerType === 'touch' && activePointers.size === 2) {
-    // 2本指ピンチ＋スクロール
     const pts = [...activePointers.values()];
     const dist = getDistBetween(pts[0], pts[1]);
     const cx = (pts[0].clientX + pts[1].clientX) / 2;
     const cy = (pts[0].clientY + pts[1].clientY) / 2;
 
     if (pinching) {
-      // ピンチズーム
       const ratio = dist / lastPinchDist;
       const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale * ratio));
       if (Math.abs(newScale - currentScale) > 0.005) {
         currentScale = newScale;
         applyScale();
       }
-      // 2本指スクロール
       scrollArea.scrollLeft += lastTwoFingerX - cx;
       scrollArea.scrollTop  += lastTwoFingerY - cy;
     }
@@ -516,7 +529,8 @@ function onPointerUp(e) {
   if ((e.pointerType === 'pen' || e.pointerType === 'mouse') && drawing) {
     drawing = false;
     ctx.globalCompositeOperation = 'source-over';
-    savedImageData = captureImageData();
+    // ★ 履歴取得はストローク完了時のみ（重い処理を描画中に走らせない）
+    saveHistory();
   }
 }
 
@@ -526,7 +540,7 @@ function onPointerCancel(e) {
   if (drawing) {
     drawing = false;
     ctx.globalCompositeOperation = 'source-over';
-    savedImageData = captureImageData();
+    saveHistory();
   }
 }
 
@@ -542,19 +556,6 @@ function getPointerPos(e) {
     x: (e.clientX - rect.left) / currentScale,
     y: (e.clientY - rect.top)  / currentScale
   };
-}
-
-function doStrokeWithSize(x, y, size) {
-  ctx.lineWidth = size;
-  ctx.lineCap   = 'round';
-  ctx.lineJoin  = 'round';
-  ctx.strokeStyle = mode === 'eraser' ? 'rgba(0,0,0,1)' : currentColor;
-  ctx.globalCompositeOperation = mode === 'eraser' ? 'destination-out' : 'source-over';
-  ctx.lineTo(x, y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  lastX = x; lastY = y;
 }
 
 function applyScale() {
