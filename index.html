@@ -5,37 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>KY活動記録</title>
+<title>現場管理システム</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#f0f0f0;min-height:100vh;}
+body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#0f1923;min-height:100vh;color:#fff;}
 
-#app{display:flex;flex-direction:column;height:100vh;}
+#top-page{display:flex;flex-direction:column;min-height:100vh;}
+#top-header{padding:32px 40px 24px;border-bottom:1px solid rgba(255,255,255,0.08);}
+#top-header h1{font-size:26px;font-weight:700;letter-spacing:0.05em;}
+#top-header p{font-size:13px;color:rgba(255,255,255,0.45);margin-top:4px;}
 
+#top-grid{
+  flex:1;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:20px;padding:32px 40px;align-content:start;
+}
+.app-card{
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+  border-radius:16px;padding:32px 28px;cursor:pointer;transition:all 0.18s;
+  display:flex;flex-direction:column;gap:14px;min-height:176px;position:relative;overflow:hidden;
+}
+.app-card:hover{background:rgba(255,255,255,0.09);border-color:rgba(255,255,255,0.2);transform:translateY(-2px);}
+.app-card.coming{cursor:default;opacity:0.42;}
+.app-card.coming:hover{transform:none;background:rgba(255,255,255,0.05);}
+.card-badge{
+  position:absolute;top:14px;right:14px;
+  font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;
+}
+.badge-active{background:rgba(46,204,113,0.18);color:#2ecc71;border:1px solid rgba(46,204,113,0.3);}
+.badge-coming{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.1);}
+.card-icon{font-size:34px;line-height:1;}
+.card-title{font-size:19px;font-weight:600;}
+.card-desc{font-size:12px;color:rgba(255,255,255,0.48);line-height:1.65;}
+.card-arrow{margin-top:auto;font-size:18px;color:rgba(255,255,255,0.22);align-self:flex-end;}
+
+#ky-page{display:none;flex-direction:column;height:100vh;}
 #toolbar{
   display:flex;align-items:center;gap:8px;padding:8px 12px;
-  background:#1e3a5f;color:#fff;flex-wrap:wrap;
-  position:sticky;top:0;z-index:100;
+  background:#1e3a5f;color:#fff;flex-wrap:wrap;position:sticky;top:0;z-index:100;
 }
-#toolbar h1{font-size:15px;font-weight:600;margin-right:8px;white-space:nowrap;}
-
+#toolbar-title{font-size:15px;font-weight:600;margin-right:4px;white-space:nowrap;}
+#back-btn{
+  padding:5px 12px;border:1px solid rgba(255,255,255,0.4);border-radius:5px;
+  background:rgba(255,255,255,0.1);color:#fff;font-size:12px;cursor:pointer;white-space:nowrap;
+}
+#back-btn:hover{background:rgba(255,255,255,0.25);}
 .tb-group{display:flex;align-items:center;gap:4px;}
 .tb-sep{width:1px;height:24px;background:rgba(255,255,255,0.3);margin:0 4px;}
-
 .tb-btn{
   padding:5px 10px;border:1px solid rgba(255,255,255,0.4);border-radius:5px;
-  background:rgba(255,255,255,0.1);color:#fff;font-size:12px;cursor:pointer;
-  white-space:nowrap;
+  background:rgba(255,255,255,0.1);color:#fff;font-size:12px;cursor:pointer;white-space:nowrap;
 }
 .tb-btn:hover{background:rgba(255,255,255,0.25);}
 .tb-btn.active{background:rgba(255,255,255,0.35);border-color:#fff;}
-
-.color-dot{
-  width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;
-}
+.color-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;}
 .color-dot.active{border-color:#fff;}
-
 .size-btn{
   width:28px;height:28px;display:flex;align-items:center;justify-content:center;
   border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;
@@ -43,103 +68,121 @@ body{font-family:'Hiragino Sans','Yu Gothic',sans-serif;background:#f0f0f0;min-h
 }
 .size-btn.active{background:rgba(255,255,255,0.35);border-color:#fff;}
 .size-dot{background:#fff;border-radius:50%;}
-
 #save-btn{background:#2ecc71;border-color:#27ae60;margin-left:auto;}
 #pdf-btn{background:#e67e22;border-color:#d35400;}
 #clear-btn{background:rgba(231,76,60,0.5);border-color:#e74c3c;}
 
-#scroll-area{flex:1;overflow:auto;padding:16px;display:flex;justify-content:center;}
-
-#form-wrap{
-  position:relative;
-  width:1123px;
-  background:#fff;
-  box-shadow:0 2px 12px rgba(0,0,0,0.2);
-}
-
-#ky-form{
-  width:1123px;
-  padding:14px 14px 8px;
-  font-size:10px;
-  position:relative;
-  z-index:1;
-  pointer-events:none;
-}
+#scroll-area{flex:1;overflow:auto;padding:16px;display:flex;justify-content:center;background:#f0f0f0;}
+#form-wrap{position:relative;width:1123px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
+#ky-form{width:1123px;padding:14px 14px 8px;font-size:10px;position:relative;z-index:1;pointer-events:none;}
 #ky-form input{pointer-events:all;}
-#ky-form input[type=number]{pointer-events:all;}
-
-#draw-canvas{
-  position:absolute;top:0;left:0;
-  width:1123px;height:100%;
-  cursor:crosshair;
-  z-index:10;
-  touch-action:none;
-}
+#draw-canvas{position:absolute;top:0;left:0;width:1123px;height:100%;cursor:crosshair;z-index:10;touch-action:none;}
 
 table{border-collapse:collapse;width:100%;}
 td,th{border:1px solid #333;padding:2px 4px;font-size:9px;}
 .lbl{background:#e7ecf3;font-weight:600;text-align:center;vertical-align:middle;}
 .title-row{background:#30608a;color:#fff;font-weight:700;text-align:center;font-size:9px;}
-
 .form-title{text-align:center;font-size:16px;font-weight:700;padding:4px;border:2px solid #333;margin-bottom:6px;}
 .sub-title{text-align:center;font-size:9px;margin-bottom:2px;color:#444;}
-
-input.cell-input{
-  border:none;outline:none;width:100%;font-size:9px;
-  background:transparent;font-family:inherit;
-}
-input[type=number].cell-input{-moz-appearance:textfield;}
-
+input.cell-input{border:none;outline:none;width:100%;font-size:9px;background:transparent;font-family:inherit;}
 .legend{font-size:8px;background:#f5f5f5;border:1px solid #333;padding:3px 6px;margin-top:4px;}
 
 #modal-overlay{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
   z-index:1000;align-items:center;justify-content:center;
 }
 #modal-overlay.show{display:flex;}
-#modal{
-  background:#fff;border-radius:10px;padding:24px;width:320px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.3);
-}
-#modal h2{font-size:16px;margin-bottom:16px;color:#1e3a5f;}
-#modal p{font-size:13px;color:#555;margin-bottom:16px;}
+#modal{background:#fff;border-radius:12px;padding:28px;width:320px;color:#333;}
+#modal h2{font-size:16px;margin-bottom:12px;color:#1e3a5f;}
+#modal p{font-size:13px;color:#666;margin-bottom:20px;}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;}
-.modal-btns button{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;}
+.modal-btns button{padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;}
 #modal-ok{background:#e74c3c;color:#fff;}
 #modal-cancel{background:#eee;color:#333;}
 
-@media (max-width:1160px){
-  #scroll-area{padding:8px;}
+#toast{
+  display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);
+  background:rgba(46,204,113,0.95);color:#fff;padding:10px 24px;
+  border-radius:24px;font-size:14px;z-index:2000;white-space:nowrap;
+}
+#toast.show{display:block;}
+
+@media(max-width:600px){
+  #top-grid{padding:16px;gap:12px;}
+  #top-header{padding:20px 16px 16px;}
+  #top-header h1{font-size:20px;}
 }
 </style>
 </head>
 <body>
 
-<div id="app">
+<div id="top-page">
+  <div id="top-header">
+    <h1>現場管理システム</h1>
+    <p>使用する機能を選択してください</p>
+  </div>
+  <div id="top-grid">
+
+    <div class="app-card" onclick="openKY()">
+      <span class="card-badge badge-active">利用可能</span>
+      <div class="card-icon">📋</div>
+      <div>
+        <div class="card-title">KY活動記録</div>
+        <div class="card-desc">危険予知活動表の作成・手書き入力・PDF出力</div>
+      </div>
+      <div class="card-arrow">→</div>
+    </div>
+
+    <div class="app-card coming">
+      <span class="card-badge badge-coming">準備中</span>
+      <div class="card-icon">📝</div>
+      <div>
+        <div class="card-title">作業日報</div>
+        <div class="card-desc">日々の作業内容・進捗・工数を記録</div>
+      </div>
+    </div>
+
+    <div class="app-card coming">
+      <span class="card-badge badge-coming">準備中</span>
+      <div class="card-icon">🦺</div>
+      <div>
+        <div class="card-title">安全パトロール記録</div>
+        <div class="card-desc">パトロール結果・指摘事項・改善確認</div>
+      </div>
+    </div>
+
+    <div class="app-card coming">
+      <span class="card-badge badge-coming">準備中</span>
+      <div class="card-icon">🔧</div>
+      <div>
+        <div class="card-title">設備点検記録</div>
+        <div class="card-desc">設備の定期点検・異常報告・整備履歴</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="ky-page">
   <div id="toolbar">
-    <h1>KY活動記録</h1>
+    <button id="back-btn" onclick="goTop()">← TOP</button>
+    <span id="toolbar-title">KY活動記録</span>
     <div class="tb-sep"></div>
     <div class="tb-group">
       <button class="tb-btn active" id="pen-btn" onclick="setMode('pen')">ペン</button>
       <button class="tb-btn" id="eraser-btn" onclick="setMode('eraser')">消しゴム</button>
     </div>
     <div class="tb-sep"></div>
-    <div class="tb-group" id="colors">
-      <div class="color-dot active" style="background:#111;" onclick="setColor('#111')" title="黒"></div>
-      <div class="color-dot" style="background:#185FA5;" onclick="setColor('#185FA5')" title="青"></div>
-      <div class="color-dot" style="background:#A32D2D;" onclick="setColor('#A32D2D')" title="赤"></div>
+    <div class="tb-group">
+      <div class="color-dot active" style="background:#111;" onclick="setColor('#111')"></div>
+      <div class="color-dot" style="background:#185FA5;" onclick="setColor('#185FA5')"></div>
+      <div class="color-dot" style="background:#A32D2D;" onclick="setColor('#A32D2D')"></div>
     </div>
     <div class="tb-sep"></div>
     <div class="tb-group">
-      <div class="size-btn active" id="sz-thin" onclick="setSize(2)" title="細">
-        <div class="size-dot" style="width:4px;height:4px;"></div>
-      </div>
-      <div class="size-btn" id="sz-mid" onclick="setSize(5)" title="中">
-        <div class="size-dot" style="width:8px;height:8px;"></div>
-      </div>
-      <div class="size-btn" id="sz-thick" onclick="setSize(10)" title="太">
-        <div class="size-dot" style="width:13px;height:13px;"></div>
-      </div>
+      <div class="size-btn active" id="sz-thin" onclick="setSize(2)"><div class="size-dot" style="width:4px;height:4px;"></div></div>
+      <div class="size-btn" id="sz-mid" onclick="setSize(5)"><div class="size-dot" style="width:8px;height:8px;"></div></div>
+      <div class="size-btn" id="sz-thick" onclick="setSize(10)"><div class="size-dot" style="width:13px;height:13px;"></div></div>
     </div>
     <div class="tb-sep"></div>
     <div class="tb-group">
@@ -157,42 +200,34 @@ input[type=number].cell-input{-moz-appearance:textfield;}
       <div id="ky-form">
         <div class="sub-title">リスクアセスメントKY活動</div>
         <div class="form-title" id="form-title-text">　　月　　日（　）の危険予知活動表</div>
-
         <table style="margin-bottom:4px;">
           <tr>
             <td class="lbl" style="width:13%;">会社名</td>
-            <td style="width:24%;"><input class="cell-input" id="company" placeholder="会社名を入力" oninput="updateTitle()"></td>
+            <td style="width:24%;"><input class="cell-input" id="company" placeholder="会社名を入力"></td>
             <td class="lbl" style="width:13%;">グループ名</td>
             <td style="width:24%;"><input class="cell-input" id="group" placeholder="グループ・工区名"></td>
             <td class="lbl" style="width:10%;">リーダー名</td>
             <td style="width:16%;"><input class="cell-input" id="leader" placeholder="氏名"></td>
           </tr>
         </table>
-
         <table style="margin-bottom:4px;">
           <thead>
             <tr>
               <th class="lbl" style="width:14%;font-size:8px;">参加者名<br>（サイン）</th>
-              <th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th>
-              <th class="lbl" style="width:10.75%;"></th>
+              <th class="lbl" style="width:10.75%;"></th><th class="lbl" style="width:10.75%;"></th>
+              <th class="lbl" style="width:10.75%;"></th><th class="lbl" style="width:10.75%;"></th>
+              <th class="lbl" style="width:10.75%;"></th><th class="lbl" style="width:10.75%;"></th>
+              <th class="lbl" style="width:10.75%;"></th><th class="lbl" style="width:10.75%;"></th>
             </tr>
           </thead>
           <tbody id="participant-body"></tbody>
         </table>
-
         <table style="margin-bottom:4px;">
           <tr>
             <td class="lbl" style="width:14%;">作業内容</td>
-            <td style="width:86%;"><input class="cell-input" id="work-content" placeholder="本日の作業内容を入力"></td>
+            <td><input class="cell-input" id="work-content" placeholder="本日の作業内容を入力"></td>
           </tr>
         </table>
-
         <table>
           <thead>
             <tr>
@@ -211,10 +246,7 @@ input[type=number].cell-input{-moz-appearance:textfield;}
             <tr><td style="height:44px;"></td><td></td><td></td><td></td><td></td><td></td></tr>
           </tbody>
         </table>
-
-        <div class="legend">
-          ☆程度（A）：致命的5　重傷3　軽傷1　　☆可能性（B）：よくある5　たまにある3　あまりない1　　☆危険度（リスク）：15〜25 重　9 中　1〜5 低
-        </div>
+        <div class="legend">☆程度（A）：致命的5　重傷3　軽傷1　　☆可能性（B）：よくある5　たまにある3　あまりない1　　☆危険度（リスク）：15〜25 重　9 中　1〜5 低</div>
       </div>
       <canvas id="draw-canvas"></canvas>
     </div>
@@ -231,247 +263,169 @@ input[type=number].cell-input{-moz-appearance:textfield;}
     </div>
   </div>
 </div>
+<div id="toast">✓ 保存しました</div>
 
 <script>
-const canvas = document.getElementById('draw-canvas');
-const ctx = canvas.getContext('2d');
-const formWrap = document.getElementById('form-wrap');
+const canvas=document.getElementById('draw-canvas');
+const ctx=canvas.getContext('2d');
+const formWrap=document.getElementById('form-wrap');
+let mode='pen',currentColor='#111',currentSize=2;
+let drawing=false,lastX=0,lastY=0;
+let historyStack=[],redoStack=[],savedImageData=null;
 
-let mode = 'pen';
-let currentColor = '#111';
-let currentSize = 2;
-let drawing = false;
-let lastX = 0, lastY = 0;
-let historyStack = [];
-let redoStack = [];
-let savedImageData = null;
-
-function resizeCanvas(){
-  const form = document.getElementById('ky-form');
-  const h = form.offsetHeight;
-  canvas.width = 1123;
-  canvas.height = h;
-  formWrap.style.height = h + 'px';
-  if(savedImageData){
-    ctx.putImageData(savedImageData, 0, 0);
-  }
+function openKY(){
+  document.getElementById('top-page').style.display='none';
+  document.getElementById('ky-page').style.display='flex';
+  updateTitle();
+  setTimeout(()=>{resizeCanvas();loadLocal();},50);
 }
-
+function goTop(){
+  document.getElementById('ky-page').style.display='none';
+  document.getElementById('top-page').style.display='flex';
+}
+function resizeCanvas(){
+  const h=document.getElementById('ky-form').offsetHeight;
+  canvas.width=1123;canvas.height=h;
+  formWrap.style.height=h+'px';
+  if(savedImageData)ctx.putImageData(savedImageData,0,0);
+}
 function buildParticipants(){
-  const rows = [
-    {label:'体　調(AM)\nよい○　悪い×', h:22},
-    {label:'体　調(PM)\nよい○　悪い×', h:22},
-    {label:'体　温(AM)', h:22},
-    {label:'体　温(PM)', h:22},
-    {label:'アルコール\nチェック（出勤）', h:22},
-    {label:'アルコール\nチェック（退勤）', h:22},
+  const rows=[
+    {label:'体　調(AM)<br>よい○　悪い×',h:22},
+    {label:'体　調(PM)<br>よい○　悪い×',h:22},
+    {label:'体　温(AM)',h:22},{label:'体　温(PM)',h:22},
+    {label:'アルコール<br>チェック（出勤）',h:22},
+    {label:'アルコール<br>チェック（退勤）',h:22},
   ];
-  const tbody = document.getElementById('participant-body');
+  const tbody=document.getElementById('participant-body');
   rows.forEach(r=>{
-    const tr = document.createElement('tr');
-    const lbl = r.label.replace(/\n/g,'<br>');
-    let cells = `<td class="lbl" style="font-size:8px;height:${r.h}px;">${lbl}</td>`;
-    for(let i=0;i<8;i++) cells += `<td style="height:${r.h}px;"></td>`;
-    tr.innerHTML = cells;
-    tbody.appendChild(tr);
+    const tr=document.createElement('tr');
+    let c=`<td class="lbl" style="font-size:8px;height:${r.h}px;">${r.label}</td>`;
+    for(let i=0;i<8;i++)c+=`<td style="height:${r.h}px;"></td>`;
+    tr.innerHTML=c;tbody.appendChild(tr);
   });
 }
-
 function updateTitle(){
-  const now = new Date();
-  const m = now.getMonth()+1;
-  const d = now.getDate();
-  const days = ['日','月','火','水','木','金','土'];
-  const w = days[now.getDay()];
-  document.getElementById('form-title-text').textContent =
-    `${String(m).padStart(2,'0')}月${String(d).padStart(2,'0')}日（${w}）の危険予知活動表`;
+  const now=new Date(),m=now.getMonth()+1,d=now.getDate();
+  const days=['日','月','火','水','木','金','土'];
+  document.getElementById('form-title-text').textContent=
+    `${String(m).padStart(2,'0')}月${String(d).padStart(2,'0')}日（${days[now.getDay()]}）の危険予知活動表`;
 }
-
 function getPos(e){
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  let clientX, clientY;
-  if(e.touches){
-    const t = e.touches[0];
-    clientX = t.clientX; clientY = t.clientY;
-  } else {
-    clientX = e.clientX; clientY = e.clientY;
-  }
-  return {
-    x: (clientX - rect.left) * scaleX,
-    y: (clientY - rect.top) * scaleY
-  };
+  const rect=canvas.getBoundingClientRect();
+  const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
+  let cx,cy;
+  if(e.touches){cx=e.touches[0].clientX;cy=e.touches[0].clientY;}
+  else{cx=e.clientX;cy=e.clientY;}
+  return{x:(cx-rect.left)*sx,y:(cy-rect.top)*sy};
 }
-
 function startDraw(e){
-  if(mode==='pen' && e.target.tagName==='INPUT') return;
-  e.preventDefault();
-  drawing = true;
-  const p = getPos(e);
-  lastX = p.x; lastY = p.y;
-  saveHistory();
-  ctx.beginPath();
-  ctx.moveTo(lastX, lastY);
+  e.preventDefault();drawing=true;
+  const p=getPos(e);lastX=p.x;lastY=p.y;
+  saveHistory();ctx.beginPath();ctx.moveTo(lastX,lastY);
 }
-
 function draw(e){
-  if(!drawing) return;
-  e.preventDefault();
-  const p = getPos(e);
-  ctx.lineWidth = mode==='eraser' ? currentSize*4 : currentSize;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = mode==='eraser' ? 'rgba(0,0,0,1)' : currentColor;
-  ctx.globalCompositeOperation = mode==='eraser' ? 'destination-out' : 'source-over';
-  ctx.lineTo(p.x, p.y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(p.x, p.y);
-  lastX = p.x; lastY = p.y;
+  if(!drawing)return;e.preventDefault();
+  const p=getPos(e);
+  ctx.lineWidth=mode==='eraser'?currentSize*4:currentSize;
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.strokeStyle=mode==='eraser'?'rgba(0,0,0,1)':currentColor;
+  ctx.globalCompositeOperation=mode==='eraser'?'destination-out':'source-over';
+  ctx.lineTo(p.x,p.y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(p.x,p.y);
+  lastX=p.x;lastY=p.y;
 }
-
-function endDraw(e){
-  if(!drawing) return;
-  drawing = false;
-  ctx.globalCompositeOperation = 'source-over';
-  savedImageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+function endDraw(){
+  if(!drawing)return;drawing=false;
+  ctx.globalCompositeOperation='source-over';
+  savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);
 }
-
-canvas.addEventListener('mousedown', startDraw);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', endDraw);
-canvas.addEventListener('touchstart', startDraw, {passive:false});
-canvas.addEventListener('touchmove', draw, {passive:false});
-canvas.addEventListener('touchend', endDraw);
+canvas.addEventListener('mousedown',startDraw);
+canvas.addEventListener('mousemove',draw);
+canvas.addEventListener('mouseup',endDraw);
+canvas.addEventListener('touchstart',startDraw,{passive:false});
+canvas.addEventListener('touchmove',draw,{passive:false});
+canvas.addEventListener('touchend',endDraw);
 
 function saveHistory(){
   historyStack.push(ctx.getImageData(0,0,canvas.width,canvas.height));
-  if(historyStack.length>30) historyStack.shift();
-  redoStack = [];
+  if(historyStack.length>30)historyStack.shift();redoStack=[];
 }
-
 function undo(){
-  if(historyStack.length===0) return;
+  if(!historyStack.length)return;
   redoStack.push(ctx.getImageData(0,0,canvas.width,canvas.height));
-  const prev = historyStack.pop();
-  ctx.putImageData(prev,0,0);
-  savedImageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  ctx.putImageData(historyStack.pop(),0,0);
+  savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);
 }
-
 function redo(){
-  if(redoStack.length===0) return;
+  if(!redoStack.length)return;
   historyStack.push(ctx.getImageData(0,0,canvas.width,canvas.height));
-  const next = redoStack.pop();
-  ctx.putImageData(next,0,0);
-  savedImageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  ctx.putImageData(redoStack.pop(),0,0);
+  savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);
 }
-
 function setMode(m){
-  mode = m;
-  document.getElementById('pen-btn').classList.toggle('active', m==='pen');
-  document.getElementById('eraser-btn').classList.toggle('active', m==='eraser');
+  mode=m;
+  document.getElementById('pen-btn').classList.toggle('active',m==='pen');
+  document.getElementById('eraser-btn').classList.toggle('active',m==='eraser');
 }
-
 function setColor(c){
-  currentColor = c;
-  mode = 'pen';
-  setMode('pen');
-  document.querySelectorAll('.color-dot').forEach(d=>{
-    d.classList.toggle('active', d.style.background===c || d.style.background===c);
-  });
-  document.querySelectorAll('.color-dot').forEach(d=>{
-    const bg = d.style.background;
-    d.classList.toggle('active', bg===c);
-  });
+  currentColor=c;setMode('pen');
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.toggle('active',d.style.background===c));
 }
-
 function setSize(s){
-  currentSize = s;
-  document.getElementById('sz-thin').classList.toggle('active', s===2);
-  document.getElementById('sz-mid').classList.toggle('active', s===5);
-  document.getElementById('sz-thick').classList.toggle('active', s===10);
+  currentSize=s;
+  document.getElementById('sz-thin').classList.toggle('active',s===2);
+  document.getElementById('sz-mid').classList.toggle('active',s===5);
+  document.getElementById('sz-thick').classList.toggle('active',s===10);
 }
-
-function confirmClear(){
-  document.getElementById('modal-overlay').classList.add('show');
-}
-function closeModal(){
-  document.getElementById('modal-overlay').classList.remove('show');
-}
+function confirmClear(){document.getElementById('modal-overlay').classList.add('show');}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
 function doClear(){
-  saveHistory();
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  savedImageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-  closeModal();
+  saveHistory();ctx.clearRect(0,0,canvas.width,canvas.height);
+  savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);closeModal();
 }
-
+function showToast(){
+  const t=document.getElementById('toast');t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
 function saveLocal(){
-  const data = {
-    company: document.getElementById('company').value,
-    group: document.getElementById('group').value,
-    leader: document.getElementById('leader').value,
-    workContent: document.getElementById('work-content').value,
-    drawing: canvas.toDataURL(),
-    savedAt: new Date().toISOString()
-  };
-  localStorage.setItem('ky_record_latest', JSON.stringify(data));
-  alert('端末に保存しました。');
+  localStorage.setItem('ky_record_latest',JSON.stringify({
+    company:document.getElementById('company').value,
+    group:document.getElementById('group').value,
+    leader:document.getElementById('leader').value,
+    workContent:document.getElementById('work-content').value,
+    drawing:canvas.toDataURL(),savedAt:new Date().toISOString()
+  }));showToast();
 }
-
 function loadLocal(){
-  const raw = localStorage.getItem('ky_record_latest');
-  if(!raw) return;
-  const data = JSON.parse(raw);
-  document.getElementById('company').value = data.company||'';
-  document.getElementById('group').value = data.group||'';
-  document.getElementById('leader').value = data.leader||'';
-  document.getElementById('work-content').value = data.workContent||'';
+  const raw=localStorage.getItem('ky_record_latest');if(!raw)return;
+  const data=JSON.parse(raw);
+  document.getElementById('company').value=data.company||'';
+  document.getElementById('group').value=data.group||'';
+  document.getElementById('leader').value=data.leader||'';
+  document.getElementById('work-content').value=data.workContent||'';
   if(data.drawing){
-    const img = new Image();
-    img.onload = ()=>{
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(img,0,0);
-      savedImageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-    };
-    img.src = data.drawing;
+    const img=new Image();
+    img.onload=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0);savedImageData=ctx.getImageData(0,0,canvas.width,canvas.height);};
+    img.src=data.drawing;
   }
 }
-
 async function exportPDF(){
-  const {jsPDF} = window.jspdf;
-  const pageW = 297, pageH = 210;
-  const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-
-  const form = document.getElementById('ky-form');
-  const formH = form.offsetHeight;
-  const formW = 1123;
-
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = formW;
-  tempCanvas.height = formH;
-  const tctx = tempCanvas.getContext('2d');
-  tctx.fillStyle = '#fff';
-  tctx.fillRect(0,0,formW,formH);
-  tctx.drawImage(canvas,0,0);
-
-  const imgData = tempCanvas.toDataURL('image/jpeg',0.92);
-  doc.addImage(imgData,'JPEG', 4, 4, pageW-8, pageH-8);
-
-  const company = document.getElementById('company').value||'未設定';
-  const group = document.getElementById('group').value||'未設定';
-  const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-  doc.save(`KY_${dateStr}_${group}.pdf`);
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const formH=document.getElementById('ky-form').offsetHeight;
+  const tmp=document.createElement('canvas');
+  tmp.width=1123;tmp.height=formH;
+  const tc=tmp.getContext('2d');
+  tc.fillStyle='#fff';tc.fillRect(0,0,1123,formH);
+  tc.drawImage(canvas,0,0);
+  doc.addImage(tmp.toDataURL('image/jpeg',0.92),'JPEG',4,4,289,202);
+  const group=document.getElementById('group').value||'未設定';
+  const now=new Date();
+  const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  doc.save(`KY_${ds}_${group}.pdf`);
 }
-
 buildParticipants();
-updateTitle();
-window.addEventListener('load', ()=>{
-  resizeCanvas();
-  loadLocal();
-});
-window.addEventListener('resize', resizeCanvas);
 </script>
 </body>
 </html>
